@@ -8,9 +8,14 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const authController = require('../controllers/authController');
+
+// 1. IMPORTANTE: Importar el middleware verificarToken
 const { verificarToken } = require('../middlewares/authMiddleware');
 
-// Middleware para capturar errores de validación
+// 2. Importar el middleware de subida de archivos (Multer)
+const { uploadAvatar } = require('../middlewares/uploadMiddleware');
+
+// Middleware genérico para capturar errores de express-validator
 const validarCampos = (req, res, next) => {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
@@ -70,5 +75,8 @@ router.post(
 
 // GET /api/v1/auth/me - Obtener información del usuario logueado
 router.get('/me', verificarToken, authController.obtenerUsuarioActual);
+
+// POST /api/v1/auth/avatar - Subir imagen de perfil con Multer
+router.post('/avatar', verificarToken, uploadAvatar.single('avatar'), authController.subirAvatar);
 
 module.exports = router;

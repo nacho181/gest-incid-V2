@@ -27,7 +27,4 @@ const areaController = require('../controllers/areaController');
 
 // Obtener lista de áreas
 router.get('/', areaController.getAreas);
-// Espera un campo form-data llamado "avatar"
-router.post('/avatar', verificarToken, uploadAvatar.single('avatar'), authController.subirAvatar);
-
 module.exports = router;

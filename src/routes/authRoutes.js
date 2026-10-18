@@ -19,6 +19,44 @@ const validarCampos = (req, res, next) => {
   next();
 };
 
+/**
+ * @openapi
+ * tags:
+ *   name: Autenticación
+ *   description: Endpoints para inicio de sesión y gestión de tokens
+ * 
+ * /api/v1/auth/login:
+ *   post:
+ *     tags: [Autenticación]
+ *     summary: Iniciar sesión en el sistema
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               usuario:
+ *                 type: string
+ *               contrasenia:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login exitoso, devuelve el token JWT
+ *       401:
+ *         description: Credenciales inválidas
+ * 
+ * /api/v1/auth/me:
+ *   get:
+ *     tags: [Autenticación]
+ *     summary: Obtener información del usuario autenticado
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Datos del usuario actual
+ */
+
 // POST /api/v1/auth/login - Con validación de entrada
 router.post(
   '/login',

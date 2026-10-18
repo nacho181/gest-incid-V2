@@ -195,45 +195,39 @@ exports.asignarIncidencia = async (req, res) => {
 exports.cancelarIncidenciaDirector = async (req, res) => {
   const { id } = req.params;
   const id_estado_cancelada = 4;
+  const client = await db.pool.connect();
 
   try {
+    await client.query('BEGIN'); // INICIO TRANSACCIÓN
+
     const checkQuery = `SELECT * FROM public.incidencias WHERE id_incidencia = $1`;
-    const checkResult = await db.query(checkQuery, [id]);
+    const checkResult = await client.query(checkQuery, [id]);
 
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
-    }
-
-    const incidencia = checkResult.rows[0];
-
-    if (incidencia.id_estado !== 1) {
-      return res.status(400).json({ mensaje: 'Solo se pueden cancelar incidencias que se encuentren en estado Pendiente' });
+    if (checkResult.rows.length === 0) throw new Error('No encontrada');
+    
+    if (checkResult.rows[0].id_estado !== 1) {
+      throw new Error('Estado inválido');
     }
 
     const updateQuery = `
-      UPDATE public.incidencias
-      SET id_estado = $1
-      WHERE id_incidencia = $2
-      RETURNING *
+      UPDATE public.incidencias SET id_estado = $1 WHERE id_incidencia = $2 RETURNING *
     `;
-    const updateResult = await db.query(updateQuery, [id_estado_cancelada, id]);
+    const updateResult = await client.query(updateQuery, [id_estado_cancelada, id]);
 
-    // Registrar en incidencias_estados
     const estadoQuery = `
-      INSERT INTO public.incidencias_estados (id_incidencia, id_estado)
-      VALUES ($1, $2)
+      INSERT INTO public.incidencias_estados (id_incidencia, id_estado) VALUES ($1, $2)
     `;
-    await db.query(estadoQuery, [id, id_estado_cancelada]);
+    await client.query(estadoQuery, [id, id_estado_cancelada]);
 
-    // Consultar datos del creador y artículo para la notificación por correo
+    await client.query('COMMIT'); // CONFIRMAR TRANSACCIÓN
+
     try {
       const uRes = await db.query(
         `SELECT u.nombres, u.apellidos, u.usuario AS email, art.descripcion AS articulo_desc
          FROM public.usuarios u
          JOIN public.incidencias inc ON inc.creado_por = u.id_usuario
          JOIN public.articulos art ON inc.id_articulo = art.id_articulo
-         WHERE inc.id_incidencia = $1`,
-        [id]
+         WHERE inc.id_incidencia = $1`, [id]
       );
       if (uRes.rows.length > 0) {
         const u = uRes.rows[0];
@@ -246,7 +240,7 @@ exports.cancelarIncidenciaDirector = async (req, res) => {
         });
       }
     } catch (mailErr) {
-      console.error('[EMAIL ERROR] Error enviando correo de cancelación (Director):', mailErr.message);
+      console.error('[EMAIL ERROR]:', mailErr.message);
     }
 
     return res.json({
@@ -255,33 +249,13 @@ exports.cancelarIncidenciaDirector = async (req, res) => {
     });
 
   } catch (error) {
-    const incId = parseInt(id, 10);
-    const inc = mockIncidenciasDirector.find(i => i.id_incidencia === incId);
-
-    if (!inc) {
-      return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
-    }
-
-    if (inc.id_estado !== 1) {
-      return res.status(400).json({ mensaje: 'Solo se pueden cancelar incidencias en estado Pendiente' });
-    }
-
-    inc.id_estado = 4;
-    inc.estado_descripcion = 'Cancelada';
-
-    // Disparar notificación simulada
-    emailService.notificarIncidenciaCancelada({
-      incidencia: inc,
-      destinatarioEmail: 'estren@correo.com',
-      destinatarioNombre: inc.usuario_creador || 'Empleado Municipal',
-      canceladoPorNombre: 'Director de Sistemas',
-      articuloDescripcion: inc.articulo_descripcion
-    }).catch(e => console.warn('[EMAIL SIMULADO ERROR]:', e.message));
-
-    return res.json({
-      mensaje: 'Incidencia cancelada exitosamente (Modo simulación)',
-      incidencia: inc
-    });
+    await client.query('ROLLBACK'); // REVERTIR SI HAY ERROR
+    if (error.message === 'No encontrada') return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
+    if (error.message === 'Estado inválido') return res.status(400).json({ mensaje: 'Solo se pueden cancelar incidencias Pendientes' });
+    
+    return res.status(500).json({ mensaje: 'Error al cancelar incidencia' });
+  } finally {
+    client.release();
   }
 };
 

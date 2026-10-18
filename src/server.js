@@ -6,6 +6,7 @@
  * ============================================================================
  */
 
+const swaggerDocs = require('./config/swagger');
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -68,6 +69,8 @@ app.get('/api/v1/health', (req, res) => {
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
+
+swaggerDocs(app);
 
 // ============================================================================
 // MANEJADOR GLOBAL DE ERRORES (Middleware de 4 parámetros)

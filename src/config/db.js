@@ -8,7 +8,7 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Configuración del pool con variables de entorno o valores por defecto
+// Configuracion del pool con variables de entorno o valores por defecto
 const pool = new Pool({
   host: process.env.PGHOST || 'localhost',
   port: process.env.PGPORT || 5432,
@@ -31,7 +31,7 @@ module.exports = {
   /**
    * Ejecuta una consulta SQL en la base de datos utilizando el pool.
    * @param {string} text - Consulta SQL parametrizada.
-   * @param {Array} params - Parámetros de la consulta SQL.
+   * @param {Array} params - Parametros de la consulta SQL.
    * @returns {Promise<Object>} Resultado de la ejecución del query.
    */
   query: (text, params) => pool.query(text, params),

@@ -12,7 +12,49 @@ const sistemasController = require('../controllers/sistemasController');
 const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
 
 // Middleware para verificar token JWT y autorizar roles de sistemas (2 = Empleado de Sistemas, 3 = Director)
-const verificarSistemas = [verificarToken, autorizarRol(2, 3)];
+const verificarSistemas = [verificarToken, autorizarRol(1, 2)];
+
+/**
+ * @openapi
+ * tags:
+ *   name: Sistemas
+ *   description: Gestión de incidencias asignadas a técnicos
+ * 
+ * /api/v1/sistemas/incidencias:
+ *   get:
+ *     tags: [Sistemas]
+ *     summary: Obtener incidencias asignadas al técnico
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de incidencias
+ * 
+ * /api/v1/sistemas/incidencias/{id}/finalizar:
+ *   put:
+ *     tags: [Sistemas]
+ *     summary: Finalizar incidencia y cargar resolución técnica
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               descripcion_resolucion:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Incidencia finalizada y correo enviado
+ */
 
 // Obtener todas las incidencias asignadas al empleado de Sistemas autenticado
 router.get('/incidencias', verificarSistemas, sistemasController.getIncidenciasAsignadas);

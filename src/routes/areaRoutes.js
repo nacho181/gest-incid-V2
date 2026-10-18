@@ -5,11 +5,29 @@
  * ============================================================================
  */
 
+const { uploadAvatar } = require('../middlewares/uploadMiddleware');
 const express = require('express');
 const router = express.Router();
 const areaController = require('../controllers/areaController');
 
+/**
+ * @openapi
+ * tags:
+ *   name: Áreas
+ *   description: Consulta de áreas municipales
+ * 
+ * /api/v1/areas:
+ *   get:
+ *     tags: [Áreas]
+ *     summary: Obtener lista de áreas disponibles
+ *     responses:
+ *       200:
+ *         description: Lista de áreas obtenida exitosamente
+ */
+
 // Obtener lista de áreas
 router.get('/', areaController.getAreas);
+// Espera un campo form-data llamado "avatar"
+router.post('/avatar', verificarToken, uploadAvatar.single('avatar'), authController.subirAvatar);
 
 module.exports = router;

@@ -87,7 +87,40 @@ const obtenerUsuarioActual = (req, res) => {
   });
 };
 
+/**
+ * Sube una imagen y actualiza el campo avatar del usuario en la base de datos.
+ */
+const subirAvatar = async (req, res) => {
+  // Multer inyecta el archivo procesado en req.file
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se subió ninguna imagen o el formato es incorrecto' });
+  }
+
+  // Generamos la ruta pública que guardaremos en la base de datos
+  const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+  const idUsuario = req.usuario.id_usuario; // Obtenido del token JWT
+
+  try {
+    const updateQuery = `
+      UPDATE public.usuarios 
+      SET avatar = $1 
+      WHERE id_usuario = $2 
+      RETURNING id_usuario, usuario, avatar
+    `;
+    const result = await db.query(updateQuery, [avatarUrl, idUsuario]);
+
+    return res.status(200).json({
+      mensaje: 'Avatar actualizado exitosamente',
+      usuario: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error al actualizar avatar:', error);
+    return res.status(500).json({ error: 'Error interno al guardar el avatar' });
+  }
+};
+
 module.exports = {
   login,
-  obtenerUsuarioActual
+  obtenerUsuarioActual,
+  subirAvatar
 };

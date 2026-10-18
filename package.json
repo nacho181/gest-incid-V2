@@ -17,7 +17,10 @@
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
+    "multer": "^2.4.0",
     "nodemailer": "^10.1.0",
-    "pg": "^8.11.5"
+    "pg": "^8.11.5",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
   }
 }

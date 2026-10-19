@@ -1,0 +1,1 @@
+module.exports = Object.freeze({ DIRECTOR: 1, SISTEMAS: 2, MUNICIPAL: 3 });

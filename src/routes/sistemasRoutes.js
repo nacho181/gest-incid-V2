@@ -10,9 +10,10 @@ const express = require('express');
 const router = express.Router();
 const sistemasController = require('../controllers/sistemasController');
 const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
+const ROLES = require('../config/roles');
 
 // Middleware para verificar token JWT y autorizar roles de sistemas (2 = Empleado de Sistemas, 3 = Director)
-const verificarSistemas = [verificarToken, autorizarRol(1, 2)];
+const verificarSistemas = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.DIRECTOR)];
 
 /**
  * @openapi

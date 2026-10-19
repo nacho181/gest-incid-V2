@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userData = null;
     }
 
-    if (!tokenJWT || !userData || (userData.rol !== 3 && userData.usuario !== 'estren@correo.com')) {
+    if (!tokenJWT || !userData || userData.rol !== 1) {
         console.warn('Acceso denegado: Usuario no autorizado para el Panel de Director');
         window.location.href = 'index.html';
         return;
@@ -93,6 +93,7 @@ function setupEventListenersDirector() {
             localStorage.removeItem('jwt_token');
             localStorage.removeItem('token');
             localStorage.removeItem('user_data');
+            localStorage.removeItem('usuario');
             window.location.href = 'index.html';
         });
     }

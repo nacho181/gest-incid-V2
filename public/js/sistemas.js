@@ -10,7 +10,7 @@
 
 const API_BASE_URL = '/api/v1';
 
-let authToken = localStorage.getItem('token');
+let authToken = localStorage.getItem('jwt_token') || localStorage.getItem('token');
 let currentUser = null;
 let incidenciasAsignadas = [];
 let filtroActual = 'todos';
@@ -74,8 +74,7 @@ function validarSesion() {
 
     try {
         currentUser = JSON.parse(userStr);
-        // Roles permitidos: 2 (Empleado de Sistemas) o 3 (Director de Sistemas)
-        if (currentUser.rol !== 2 && currentUser.rol !== 3) {
+        if (currentUser.rol !== 2 && currentUser.rol !== 1) {
             alert('Acceso restringido: Se requieren permisos del Área de Sistemas.');
             window.location.href = 'index.html';
             return false;
@@ -85,7 +84,7 @@ function validarSesion() {
         const lblNombre = document.getElementById('lblSistemasNombre');
         const lblRol = document.getElementById('lblSistemasRol');
         if (lblNombre) lblNombre.textContent = `${currentUser.nombres} ${currentUser.apellidos}`;
-        if (lblRol) lblRol.textContent = currentUser.rol === 3 ? 'Director de Sistemas' : 'Empleado de Sistemas';
+        if (lblRol) lblRol.textContent = currentUser.rol === 1 ? 'Director de Sistemas' : 'Empleado de Sistemas';
 
         return true;
     } catch (e) {
@@ -382,7 +381,9 @@ async function finalizarIncidenciaSubmit(e) {
  * Cierra la sesión activa y redirige al login.
  */
 function cerrarSesion() {
+    localStorage.removeItem('jwt_token');
     localStorage.removeItem('token');
+    localStorage.removeItem('user_data');
     localStorage.removeItem('usuario');
     window.location.href = 'index.html';
 }

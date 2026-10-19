@@ -17,9 +17,10 @@ const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const categoriaController = require('../controllers/categoriaController');
 const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
+const ROLES = require('../config/roles');
 
 // Middleware estricto para validar token JWT y verificar roles del Área de Sistemas (1: Director, 2: Empleado de Sistemas)
-const verificarAdmin = [verificarToken, autorizarRol(1, 2)];
+const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.DIRECTOR)];
 
 // Middleware genérico para capturar errores de express-validator
 const validarCampos = (req, res, next) => {

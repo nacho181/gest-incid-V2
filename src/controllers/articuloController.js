@@ -12,6 +12,7 @@
  */
 
 const db = require('../config/db');
+const ROLES = require('../config/roles');
 
 // Datos iniciales de respaldo en memoria (Modo resiliente)
 let mockArticulos = [
@@ -45,7 +46,8 @@ let mockAreasRef = [
  */
 exports.getArticulos = async (req, res) => {
   const { incluir_inactivos, todos, id_categoria, id_area, buscar } = req.query;
-  const traerTodos = incluir_inactivos === 'true' || incluir_inactivos === '1' || todos === 'true' || todos === '1';
+  const esAdmin = req.usuario.rol !== ROLES.MUNICIPAL;
+  const traerTodos = esAdmin && (incluir_inactivos === 'true' || incluir_inactivos === '1' || todos === 'true' || todos === '1');
 
   try {
     let queryText = `

@@ -110,14 +110,12 @@ async function manejarLogin(e) {
 
         mostrarToast(`Bienvenido/a, ${currentUser.nombres}!`, 'exito');
         document.getElementById('formLogin').reset();
-
-        // Si es Director de Sistemas (rol 3 o estren@correo.com), redireccionar al Panel Director
-        if (currentUser.rol === 3 || currentUser.usuario === 'estren@correo.com') {
+        
+        if (currentUser.rol === 1) {
             window.location.href = 'director.html';
             return;
         }
 
-        // Si es Empleado de Sistemas (rol 2), redireccionar al Panel Técnico de Sistemas
         if (currentUser.rol === 2) {
             window.location.href = 'sistemas.html';
             return;
@@ -189,8 +187,8 @@ function mostrarVistaLogin() {
  * Muestra el panel principal y carga los datos de acuerdo al usuario.
  */
 function mostrarVistaAutenticada() {
-    // Si el usuario autenticado es Director de Sistemas, redireccionar al Panel de Director
-    if (currentUser && (currentUser.rol === 3 || currentUser.usuario === 'estren@correo.com')) {
+
+    if (currentUser && currentUser.rol === 1) {
         window.location.href = 'director.html';
         return;
     }
@@ -227,9 +225,9 @@ function mostrarVistaAutenticada() {
         document.getElementById('lblUsuarioNombre').textContent = `${currentUser.nombres} ${currentUser.apellidos}`;
 
         let nombreRol = 'Empleado';
-        if (currentUser.rol === 1) nombreRol = 'Empleado Municipal';
+        if (currentUser.rol === 1) nombreRol = 'Director de Sistemas';
         if (currentUser.rol === 2) nombreRol = 'Empleado de Sistemas';
-        if (currentUser.rol === 3) nombreRol = 'Director de Sistemas';
+        if (currentUser.rol === 3) nombreRol = 'Empleado Municipal';
 
         document.getElementById('lblUsuarioRol').textContent = nombreRol;
     }

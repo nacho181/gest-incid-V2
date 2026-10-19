@@ -10,6 +10,7 @@
 
 const db = require('../config/db');
 const emailService = require('../services/emailService');
+const ROLES = require('../config/roles');
 
 // Datos de respaldo en memoria cuando PostgreSQL no está conectado (Modo Simulación)
 let mockIncidenciasSistemas = [
@@ -185,7 +186,7 @@ exports.finalizarIncidencia = async (req, res) => {
     const incidencia = checkResult.rows[0];
 
     // 3. Validar permisos: debe estar asignada al técnico autenticado (o ser Director rol 3)
-    if (incidencia.asignado_a !== idUsuarioAutenticado && req.usuario.rol !== 3) {
+    if (incidencia.asignado_a !== idUsuarioAutenticado && req.usuario.rol !== ROLES.DIRECTOR) {
       return res.status(403).json({
         error: 'Permiso denegado',
         mensaje: 'No tienes autorización para finalizar esta incidencia ya que no está asignada a tu cargo.'
@@ -257,7 +258,7 @@ exports.finalizarIncidencia = async (req, res) => {
       });
     }
 
-    if (incMock.asignado_a !== idUsuarioAutenticado && req.usuario.rol !== 3) {
+    if (incMock.asignado_a !== idUsuarioAutenticado && req.usuario.rol !== ROLES.DIRECTOR) {
       return res.status(403).json({
         error: 'Permiso denegado',
         mensaje: 'No tienes autorización para finalizar esta incidencia.'

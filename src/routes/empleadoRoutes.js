@@ -9,9 +9,10 @@ const express = require('express');
 const router = express.Router();
 const empleadoController = require('../controllers/empleadoController');
 const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
+const ROLES = require('../config/roles');
 
 // Middleware para que cualquier empleado logueado pueda operar
-const verificarEmpleado = [verificarToken, autorizarRol(1, 2, 3)];
+const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS, ROLES.MUNICIPAL)];
 
 /**
  * @openapi

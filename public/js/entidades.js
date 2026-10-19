@@ -69,6 +69,7 @@ function verificarUsuarioCabecera() {
             localStorage.removeItem('jwt_token');
             localStorage.removeItem('token');
             localStorage.removeItem('user_data');
+            localStorage.removeItem('usuario');
             window.location.href = 'index.html';
         });
     }
@@ -81,7 +82,7 @@ function verificarUsuarioCabecera() {
                 lblUser.textContent = `${user.nombres} ${user.apellidos || ''}`.trim();
             }
             if (lblUserRol && user) {
-                const rolTexto = user.rol === 3 ? 'Director de Sistemas' : user.rol === 2 ? 'Empleado de Sistemas' : 'Empleado Municipal';
+                const rolTexto = user.rol === 1 ? 'Director de Sistemas' : user.rol === 2 ? 'Empleado de Sistemas' : 'Empleado Municipal';
                 lblUserRol.textContent = rolTexto;
             }
         }

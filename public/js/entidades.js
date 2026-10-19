@@ -20,7 +20,7 @@ try {
 }
 
 // Solo Director (1) y Sistemas (2) pueden administrar entidades
-const SIN_ACCESO = !TOKEN || !USER || ![1, 2].includes(USER.rol);
+const SIN_ACCESO = !TOKEN || !USER || USER.rol !== 2;
 if (SIN_ACCESO) {
     window.location.replace('index.html');
 }

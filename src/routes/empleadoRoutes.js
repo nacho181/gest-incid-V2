@@ -13,6 +13,7 @@ const ROLES = require('../config/roles');
 
 // Middleware para que cualquier empleado logueado pueda operar
 const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS, ROLES.MUNICIPAL)];
+const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
 
 /**
  * @openapi
@@ -71,7 +72,7 @@ const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SI
 router.get('/usuarios/empleados', verificarEmpleado, empleadoController.getEmpleados);
 
 // Crear/Reportar una nueva incidencia técnica
-router.post('/incidencias', verificarEmpleado, empleadoController.crearIncidencia);
+router.post('/incidencias', verificarSoloMunicipal, empleadoController.crearIncidencia);
 
 // Obtener las incidencias reportadas por el empleado activo
 router.get('/incidencias/mis-incidencias', verificarEmpleado, empleadoController.getMisIncidencias);

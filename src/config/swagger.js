@@ -3,6 +3,7 @@ const swaggerUi = require('swagger-ui-express');
 
 const options = {
   definition: {
+
     openapi: '3.0.0',
     info: {
       title: 'API Incidencias - Municipalidad de Concordia',
@@ -14,6 +15,15 @@ const options = {
         url: 'http://localhost:3000',
         description: 'Servidor Local'
       }
+    ],
+    tags: [
+      { name: 'Autenticación', description: 'Inicio de sesión y perfil' },
+      { name: 'Empleados', description: 'Reporte y listado de incidencias propias' },
+      { name: 'Sistemas', description: 'Incidencias asignadas a técnicos' },
+      { name: 'Director', description: 'Dashboard, asignación y reportes' },
+      { name: 'Categorías', description: 'BREAD de categorías' },
+      { name: 'Artículos', description: 'BREAD de artículos' },
+      { name: 'Áreas', description: 'Consulta de áreas' }
     ],
     components: {
       securitySchemes: {

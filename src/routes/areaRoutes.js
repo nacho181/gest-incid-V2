@@ -12,10 +12,6 @@ const areaController = require('../controllers/areaController');
 
 /**
  * @openapi
- * tags:
- *   name: Áreas
- *   description: Consulta de áreas municipales
- * 
  * /api/v1/areas:
  *   get:
  *     tags: [Áreas]

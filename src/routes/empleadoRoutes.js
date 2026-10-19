@@ -16,10 +16,6 @@ const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SI
 
 /**
  * @openapi
- * tags:
- *   name: Empleados
- *   description: Endpoints para el reporte y listado de incidencias de empleados
- * 
  * /api/v1/incidencias:
  *   post:
  *     tags: [Empleados]

@@ -17,10 +17,6 @@ const verificarSistemas = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.DI
 
 /**
  * @openapi
- * tags:
- *   name: Sistemas
- *   description: Gestión de incidencias asignadas a técnicos
- * 
  * /api/v1/sistemas/incidencias:
  *   get:
  *     tags: [Sistemas]

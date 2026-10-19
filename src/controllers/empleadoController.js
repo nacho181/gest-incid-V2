@@ -9,6 +9,7 @@
 const db = require('../config/db');
 const emailService = require('../services/emailService');
 
+//Ya se pueden borrar
 // Datos iniciales de simulación en memoria (Respaldo resiliente)
 let mockUsuarios = [
   { id_usuario: 1, id_area: 3, nombres: 'Carlos', apellidos: 'Perez', usuario: 'carper@correo.com', rol: 2, activo: 1, area_descripcion: 'Sistemas' },
@@ -83,95 +84,74 @@ exports.getArticulos = async (req, res) => {
  * @param {Object} res - Objeto de respuesta HTTP.
  */
 exports.crearIncidencia = async (req, res) => {
-  const { id_articulo, creado_por, prioridad, descripcion_pedido } = req.body;
+  const { id_articulo, prioridad, descripcion_pedido } = req.body;
+  const creado_por = req.usuario.id_usuario;
 
-  if (!id_articulo || !creado_por || !descripcion_pedido) {
-    return res.status(400).json({ mensaje: 'Faltan campos obligatorios: id_articulo, creado_por y descripcion_pedido' });
+  if (!id_articulo || !descripcion_pedido) {
+    return res.status(400).json({ mensaje: 'Faltan campos obligatorios: id_articulo y descripcion_pedido' });
   }
 
-  const id_estado_inicial = 1; // 1 = Pendiente
-  const asignado_a_default = 1; // Asignado por defecto
+  const id_estado_inicial = 1; // Pendiente
+  const asignado_a_default = 1; // Asignación por defecto (se reasigna desde el Director)
+  let client;
 
   try {
-    // Insertar en la tabla incidencias
-    const insertQuery = `
-      INSERT INTO public.incidencias (id_articulo, id_estado, creado_por, asignado_a, prioridad, descripcion_pedido, descripcion_resolucion)
-      VALUES ($1, $2, $3, $4, $5, $6, '')
-      RETURNING *
-    `;
-    const values = [id_articulo, id_estado_inicial, creado_por, asignado_a_default, prioridad || 1, descripcion_pedido];
-    const result = await db.query(insertQuery, values);
-    const nuevaIncidencia = result.rows[0];
+    client = await db.pool.connect();
+    await client.query('BEGIN');
 
-    // Registrar cambio de estado inicial en incidencias_estados
-    const estadoQuery = `
-      INSERT INTO public.incidencias_estados (id_incidencia, id_estado)
-      VALUES ($1, $2)
-    `;
-    await db.query(estadoQuery, [nuevaIncidencia.id_incidencia, id_estado_inicial]);
+    const art = await client.query(
+      'SELECT 1 FROM public.articulos WHERE id_articulo = $1 AND activo = 1', [id_articulo]);
+    if (art.rows.length === 0) throw new Error('Artículo inválido');
 
-    return res.status(201).json({
-      mensaje: 'Incidencia creada correctamente',
-      incidencia: nuevaIncidencia
-    });
+    const insert = await client.query(
+      `INSERT INTO public.incidencias (id_articulo, id_estado, creado_por, asignado_a, prioridad, descripcion_pedido, descripcion_resolucion)
+       VALUES ($1, $2, $3, $4, $5, $6, '') RETURNING *`,
+      [id_articulo, id_estado_inicial, creado_por, asignado_a_default, prioridad || 1, descripcion_pedido]
+    );
+    const nueva = insert.rows[0];
+
+    await client.query(
+      'INSERT INTO public.incidencias_estados (id_incidencia, id_estado) VALUES ($1, $2)',
+      [nueva.id_incidencia, id_estado_inicial]
+    );
+
+    await client.query('COMMIT');
+    return res.status(201).json({ mensaje: 'Incidencia creada correctamente', incidencia: nueva });
 
   } catch (error) {
-    // Manejo de inserción en modo simulación (memoria)
-    const art = mockArticulos.find(a => a.id_articulo === parseInt(id_articulo, 10));
-    const nueva = {
-      id_incidencia: mockIncidencias.length + 1,
-      id_articulo: parseInt(id_articulo, 10),
-      id_estado: 1,
-      creado_por: parseInt(creado_por, 10),
-      asignado_a: 1,
-      creado: new Date().toISOString(),
-      prioridad: parseInt(prioridad, 10) || 1,
-      descripcion_pedido,
-      descripcion_resolucion: '',
-      estado_descripcion: 'Pendiente',
-      articulo_descripcion: art ? art.descripcion : `Artículo #${id_articulo}`
-    };
-    mockIncidencias.unshift(nueva);
-
-    return res.status(201).json({
-      mensaje: 'Incidencia creada correctamente (Modo simulación)',
-      incidencia: nueva
-    });
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    if (error.message === 'Artículo inválido') {
+      return res.status(400).json({ mensaje: 'El artículo no existe o está inactivo' });
+    }
+    console.error('Error al crear incidencia:', error);
+    return res.status(500).json({ mensaje: 'Error al crear la incidencia' });
+  } finally {
+    if (client) client.release();
   }
 };
-
 /**
  * Obtiene las incidencias reportadas por un empleado específico.
  * @param {Object} req - Objeto de solicitud HTTP conteniendo query id_usuario.
  * @param {Object} res - Objeto de respuesta HTTP.
  */
 exports.getMisIncidencias = async (req, res) => {
-  const { id_usuario } = req.query;
-
-  if (!id_usuario) {
-    return res.status(400).json({ mensaje: 'El parámetro id_usuario es obligatorio' });
-  }
-
   try {
-    const queryText = `
-      SELECT inc.id_incidencia, inc.id_articulo, inc.id_estado, inc.creado_por, inc.asignado_a,
-             inc.creado, inc.prioridad, inc.descripcion_pedido, inc.descripcion_resolucion,
-             est.descripcion AS estado_descripcion,
-             art.descripcion AS articulo_descripcion
-      FROM public.incidencias inc
-      JOIN public.estados est ON inc.id_estado = est.id_estado
-      JOIN public.articulos art ON inc.id_articulo = art.id_articulo
-      WHERE inc.creado_por = $1
-      ORDER BY inc.creado DESC
-    `;
-    const result = await db.query(queryText, [id_usuario]);
+    const result = await db.query(
+      `SELECT inc.id_incidencia, inc.id_articulo, inc.id_estado, inc.creado_por, inc.asignado_a,
+              inc.creado, inc.prioridad, inc.descripcion_pedido, inc.descripcion_resolucion,
+              est.descripcion AS estado_descripcion,
+              art.descripcion AS articulo_descripcion
+       FROM public.incidencias inc
+       JOIN public.estados est ON inc.id_estado = est.id_estado
+       JOIN public.articulos art ON inc.id_articulo = art.id_articulo
+       WHERE inc.creado_por = $1
+       ORDER BY inc.creado DESC`,
+      [req.usuario.id_usuario]
+    );
     return res.json(result.rows);
-
   } catch (error) {
-    // Filtro en memoria
-    const userId = parseInt(id_usuario, 10);
-    const filtradas = mockIncidencias.filter(i => i.creado_por === userId);
-    return res.json(filtradas);
+    console.error('Error al listar incidencias:', error);
+    return res.status(500).json({ mensaje: 'Error al obtener las incidencias' });
   }
 };
 
@@ -183,40 +163,35 @@ exports.getMisIncidencias = async (req, res) => {
 
 exports.cancelarIncidencia = async (req, res) => {
   const { id } = req.params;
-  const { id_usuario } = req.body;
-
-  if (!id_usuario) {
-    return res.status(400).json({ mensaje: 'El parámetro id_usuario es obligatorio' });
-  }
-
-  const id_estado_cancelado = 4; // 4 = Cancelada
-  const client = await db.pool.connect();
+  const idUsuario = req.usuario.id_usuario;
+  const id_estado_cancelado = 4;
+  let client;
 
   try {
-    await client.query('BEGIN'); // INICIO TRANSACCIÓN
+    client = await db.pool.connect();
+    await client.query('BEGIN');
 
-    const checkQuery = `SELECT * FROM public.incidencias WHERE id_incidencia = $1`;
-    const checkResult = await client.query(checkQuery, [id]);
+    const checkResult = await client.query(
+      'SELECT * FROM public.incidencias WHERE id_incidencia = $1 FOR UPDATE', [id]);
 
     if (checkResult.rows.length === 0) throw new Error('No encontrada');
     const incidencia = checkResult.rows[0];
 
-    if (incidencia.creado_por !== parseInt(id_usuario, 10)) throw new Error('No tiene permiso');
+    if (incidencia.creado_por !== idUsuario) throw new Error('No tiene permiso');
     if (incidencia.id_estado !== 1) throw new Error('Estado inválido');
 
-    const updateQuery = `
-      UPDATE public.incidencias SET id_estado = $1 WHERE id_incidencia = $2 RETURNING *
-    `;
-    const updateResult = await client.query(updateQuery, [id_estado_cancelado, id]);
+    const updateResult = await client.query(
+      'UPDATE public.incidencias SET id_estado = $1 WHERE id_incidencia = $2 RETURNING *',
+      [id_estado_cancelado, id]
+    );
+    await client.query(
+      'INSERT INTO public.incidencias_estados (id_incidencia, id_estado) VALUES ($1, $2)',
+      [id, id_estado_cancelado]
+    );
 
-    const estadoQuery = `
-      INSERT INTO public.incidencias_estados (id_incidencia, id_estado) VALUES ($1, $2)
-    `;
-    await client.query(estadoQuery, [id, id_estado_cancelado]);
+    await client.query('COMMIT');
 
-    await client.query('COMMIT'); // CONFIRMAR TRANSACCIÓN
-
-    // Enviar correo (fuera de la transacción para no bloquear la BD si falla internet)
+    // Email fuera de la transacción
     try {
       const uRes = await db.query(
         `SELECT u.nombres, u.apellidos, u.usuario AS email, art.descripcion AS articulo_desc
@@ -239,19 +214,16 @@ exports.cancelarIncidencia = async (req, res) => {
       console.error('[EMAIL ERROR]:', mailErr.message);
     }
 
-    return res.json({
-      mensaje: 'Incidencia cancelada correctamente',
-      incidencia: updateResult.rows[0]
-    });
+    return res.json({ mensaje: 'Incidencia cancelada correctamente', incidencia: updateResult.rows[0] });
 
   } catch (error) {
-    await client.query('ROLLBACK'); // REVERTIR SI HAY ERROR
+    if (client) await client.query('ROLLBACK').catch(() => {});
     if (error.message === 'No encontrada') return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
     if (error.message === 'No tiene permiso') return res.status(403).json({ mensaje: 'No tiene permiso para cancelar' });
     if (error.message === 'Estado inválido') return res.status(400).json({ mensaje: 'Solo se pueden cancelar incidencias Pendientes' });
-    
+    console.error('Error al cancelar:', error);
     return res.status(500).json({ mensaje: 'Error al cancelar' });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 };

@@ -31,8 +31,6 @@ const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SI
  *             properties:
  *               id_articulo:
  *                 type: integer
- *               creado_por:
- *                 type: integer
  *               prioridad:
  *                 type: integer
  *               descripcion_pedido:
@@ -47,12 +45,6 @@ const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SI
  *     summary: Obtener las incidencias reportadas por el usuario
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: id_usuario
- *         required: true
- *         schema:
- *           type: integer
  *     responses:
  *       200:
  *         description: Lista de incidencias
@@ -69,15 +61,6 @@ const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SI
  *         required: true
  *         schema:
  *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               id_usuario:
- *                 type: integer
  *     responses:
  *       200:
  *         description: Incidencia cancelada

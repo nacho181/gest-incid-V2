@@ -195,11 +195,10 @@ exports.asignarIncidencia = async (req, res) => {
 exports.cancelarIncidenciaDirector = async (req, res) => {
   const { id } = req.params;
   const id_estado_cancelada = 4;
-  const client = await db.pool.connect();
+  let client;
 
   try {
-    await client.query('BEGIN'); // INICIO TRANSACCIÓN
-
+    client = await db.pool.connect();
     const checkQuery = `SELECT * FROM public.incidencias WHERE id_incidencia = $1`;
     const checkResult = await client.query(checkQuery, [id]);
 
@@ -249,13 +248,13 @@ exports.cancelarIncidenciaDirector = async (req, res) => {
     });
 
   } catch (error) {
-    await client.query('ROLLBACK'); // REVERTIR SI HAY ERROR
+    if (client) await client.query('ROLLBACK').catch(() => {});
     if (error.message === 'No encontrada') return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
     if (error.message === 'Estado inválido') return res.status(400).json({ mensaje: 'Solo se pueden cancelar incidencias Pendientes' });
     
     return res.status(500).json({ mensaje: 'Error al cancelar incidencia' });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 };
 

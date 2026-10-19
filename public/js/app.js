@@ -358,7 +358,7 @@ async function cargarMisIncidencias() {
     tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Cargando incidencias...</td></tr>`;
 
     try {
-        const response = await fetchConAuth(`${API_BASE_URL}/incidencias/mis-incidencias?id_usuario=${currentUser.id_usuario}`);
+        const response = await fetchConAuth(`${API_BASE_URL}/incidencias/mis-incidencias`);
         if (!response.ok) throw new Error('Error al obtener incidencias');
 
         const result = await response.json();
@@ -450,7 +450,6 @@ async function crearIncidencia(e) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 id_articulo,
-                creado_por: currentUser.id_usuario,
                 prioridad,
                 descripcion_pedido
             })
@@ -488,8 +487,7 @@ async function cancelarIncidencia(idIncidencia) {
     try {
         const response = await fetchConAuth(`${API_BASE_URL}/incidencias/${idIncidencia}/cancelar`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_usuario: currentUser.id_usuario })
+            headers: { 'Content-Type': 'application/json' }
         });
 
         const data = await response.json();

@@ -34,10 +34,6 @@ const validarCampos = (req, res, next) => {
 
 /**
  * @openapi
- * tags:
- *   name: Artículos
- *   description: BREAD de Artículos (Solo Sistemas)
- * 
  * /api/v1/articulos:
  *   get:
  *     tags: [Artículos]

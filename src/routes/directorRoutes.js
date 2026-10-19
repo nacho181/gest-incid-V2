@@ -16,10 +16,6 @@ const verificarDirector = [verificarToken, autorizarRol(ROLES.DIRECTOR)];
 
 /**
  * @openapi
- * tags:
- *   name: Director
- *   description: Panel de supervisión y reportes del Director de Sistemas
- * 
  * /api/v1/director/dashboard:
  *   get:
  *     tags: [Director]

@@ -26,14 +26,11 @@ const validarCampos = (req, res, next) => {
 
 /**
  * @openapi
- * tags:
- *   name: Autenticación
- *   description: Endpoints para inicio de sesión y gestión de tokens
- * 
  * /api/v1/auth/login:
  *   post:
  *     tags: [Autenticación]
  *     summary: Iniciar sesión en el sistema
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:

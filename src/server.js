@@ -65,12 +65,18 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
-// Ruta por defecto para SPA o fallback HTML (debe ir antes del error handler)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+// Documentación Swagger 
+swaggerDocs(app);
+
+// 404 en JSON para rutas /api inexistentes
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: true, mensaje: 'Ruta no encontrada' });
 });
 
-swaggerDocs(app);
+// Fallback del frontend (excluye /api)
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
 // ============================================================================
 // MANEJADOR GLOBAL DE ERRORES (Middleware de 4 parámetros)

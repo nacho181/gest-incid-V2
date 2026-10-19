@@ -21,6 +21,7 @@ const ROLES = require('../config/roles');
 
 // Middleware estricto para validar token JWT y verificar roles del Área de Sistemas (1: Director, 2: Empleado de Sistemas)
 const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.DIRECTOR)];
+const verificarLectura = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS, ROLES.MUNICIPAL)];
 
 // Middleware genérico para capturar errores de express-validator
 const validarCampos = (req, res, next) => {
@@ -129,10 +130,10 @@ const validarCampos = (req, res, next) => {
  */
 
 // BROWSE: Listar artículos activos con filtros opcionales
-router.get('/', verificarAdmin, articuloController.getArticulos);
+router.get('/', verificarLectura, articuloController.getArticulos);
 
 // READ: Obtener detalle de un artículo por ID
-router.get('/:id', verificarAdmin, articuloController.getArticuloById);
+router.get('/:id', verificarLectura, articuloController.getArticuloById);
 
 // ADD: Crear un nuevo artículo con validaciones estrictas
 router.post(

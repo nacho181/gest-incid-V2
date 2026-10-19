@@ -91,9 +91,6 @@ const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SI
 // Obtener la lista de usuarios/empleados municipales
 router.get('/usuarios/empleados', verificarEmpleado, empleadoController.getEmpleados);
 
-// Obtener el catálogo de artículos y equipamientos activos
-router.get('/articulos', verificarEmpleado, empleadoController.getArticulos);
-
 // Crear/Reportar una nueva incidencia técnica
 router.post('/incidencias', verificarEmpleado, empleadoController.crearIncidencia);
 

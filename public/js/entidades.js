@@ -11,6 +11,39 @@
  */
 
 const API_BASE_URL = '/api/v1';
+const TOKEN = localStorage.getItem('jwt_token') || localStorage.getItem('token');
+let USER = null;
+try {
+    USER = JSON.parse(localStorage.getItem('user_data') || 'null');
+} catch (e) {
+    USER = null;
+}
+
+// Solo Director (1) y Sistemas (2) pueden administrar entidades
+const SIN_ACCESO = !TOKEN || !USER || ![1, 2].includes(USER.rol);
+if (SIN_ACCESO) {
+    window.location.replace('index.html');
+}
+
+function limpiarSesion() {
+    ['jwt_token', 'token', 'user_data', 'usuario'].forEach(k => localStorage.removeItem(k));
+}
+
+function authFetch(url, options = {}) {
+    return fetch(url, {
+        ...options,
+        headers: {
+            ...(options.headers || {}),
+            Authorization: `Bearer ${TOKEN}`
+        }
+    }).then(res => {
+        if (res.status === 401) {
+            limpiarSesion();
+            window.location.replace('index.html');
+        }
+        return res;
+    });
+}
 
 // Estado local
 let categoriasCache = [];
@@ -29,6 +62,7 @@ let modalConfirmDelete = null;
 let itemABorrar = null; // { tipo: 'categoria'|'articulo', id, nombre }
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (SIN_ACCESO) return;
     // 1. Inicializar Toast de Bootstrap
     const toastEl = document.getElementById('toast');
     if (toastEl && window.bootstrap) {
@@ -66,10 +100,7 @@ function verificarUsuarioCabecera() {
 
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
-            localStorage.removeItem('jwt_token');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user_data');
-            localStorage.removeItem('usuario');
+            limpiarSesion();
             window.location.href = 'index.html';
         });
     }
@@ -145,7 +176,7 @@ async function cargarCategorias() {
 
     try {
         const url = `${API_BASE_URL}/categorias${incluirInactivos ? '?incluir_inactivos=true' : ''}`;
-        const response = await fetch(url);
+        const response = await authFetch(url);
         if (!response.ok) throw new Error('Error al consultar categorías');
 
         categoriasCache = await response.json();
@@ -216,7 +247,7 @@ function filtrarCategorias() {
  */
 async function verDetalleCategoria(id) {
     try {
-        const res = await fetch(`${API_BASE_URL}/categorias/${id}`);
+        const res = await authFetch(`${API_BASE_URL}/categorias/${id}`);
         if (!res.ok) throw new Error('No se pudo obtener el detalle de la categoría');
         const cat = await res.json();
 
@@ -248,7 +279,7 @@ function abrirModalCrearCategoria() {
  */
 async function abrirModalEditarCategoria(id) {
     try {
-        const res = await fetch(`${API_BASE_URL}/categorias/${id}`);
+        const res = await authFetch(`${API_BASE_URL}/categorias/${id}`);
         if (!res.ok) throw new Error('Error al cargar la categoría');
         const cat = await res.json();
 
@@ -285,7 +316,7 @@ async function guardarCategoria(e) {
     if (esEdicion) bodyData.activo = parseInt(activo, 10);
 
     try {
-        const res = await fetch(url, {
+        const res = await authFetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bodyData)
@@ -306,7 +337,7 @@ async function guardarCategoria(e) {
  */
 async function reactivarCategoria(id) {
     try {
-        const res = await fetch(`${API_BASE_URL}/categorias/${id}/reactivar`, { method: 'PUT' });
+        const res = await authFetch(`${API_BASE_URL}/categorias/${id}/reactivar`, { method: 'PUT' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.mensaje || 'Error al reactivar categoría');
 
@@ -326,7 +357,7 @@ async function reactivarCategoria(id) {
  */
 async function cargarAreas() {
     try {
-        const res = await fetch(`${API_BASE_URL}/areas`);
+        const res = await authFetch(`${API_BASE_URL}/areas`);
         if (!res.ok) throw new Error('Error al consultar áreas');
         areasCache = await res.json();
         poblarSelectsAreas();
@@ -345,7 +376,7 @@ async function cargarArticulos() {
 
     try {
         const url = `${API_BASE_URL}/articulos${incluirInactivos ? '?incluir_inactivos=true' : ''}`;
-        const response = await fetch(url);
+        const response = await authFetch(url);
         if (!response.ok) throw new Error('Error al consultar artículos');
 
         articulosCache = await response.json();
@@ -435,7 +466,7 @@ function filtrarArticulos() {
  */
 async function verDetalleArticulo(id) {
     try {
-        const res = await fetch(`${API_BASE_URL}/articulos/${id}`);
+        const res = await authFetch(`${API_BASE_URL}/articulos/${id}`);
         if (!res.ok) throw new Error('No se pudo obtener el detalle del artículo');
         const art = await res.json();
 
@@ -471,7 +502,7 @@ function abrirModalCrearArticulo() {
 async function abrirModalEditarArticulo(id) {
     try {
         poblarSelectsFormularioArticulo();
-        const res = await fetch(`${API_BASE_URL}/articulos/${id}`);
+        const res = await authFetch(`${API_BASE_URL}/articulos/${id}`);
         if (!res.ok) throw new Error('Error al cargar el artículo');
         const art = await res.json();
 
@@ -516,7 +547,7 @@ async function guardarArticulo(e) {
     if (esEdicion) bodyData.activo = parseInt(activo, 10);
 
     try {
-        const res = await fetch(url, {
+        const res = await authFetch(url, {
             method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bodyData)
@@ -537,7 +568,7 @@ async function guardarArticulo(e) {
  */
 async function reactivarArticulo(id) {
     try {
-        const res = await fetch(`${API_BASE_URL}/articulos/${id}/reactivar`, { method: 'PUT' });
+        const res = await authFetch(`${API_BASE_URL}/articulos/${id}/reactivar`, { method: 'PUT' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.mensaje || 'Error al reactivar artículo');
 
@@ -574,7 +605,7 @@ async function ejecutarBorradoLogico() {
     const url = tipo === 'categoria' ? `${API_BASE_URL}/categorias/${id}` : `${API_BASE_URL}/articulos/${id}`;
 
     try {
-        const res = await fetch(url, { method: 'DELETE' });
+        const res = await authFetch(url, { method: 'DELETE' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.mensaje || 'Error al dar de baja el registro');
 

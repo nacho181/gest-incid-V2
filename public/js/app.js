@@ -219,7 +219,11 @@ function mostrarVistaAutenticada() {
             btnLinkSistemas.classList.add('d-none');
         }
     }
-
+    const btnEntidades = document.getElementById('btnLinkEntidades');
+    if (btnEntidades) {
+        const puedeAdministrar = currentUser && (currentUser.rol === 1 || currentUser.rol === 2);
+        btnEntidades.classList.toggle('d-none', !puedeAdministrar);
+    }
     // Mapear nombres y roles
     if (currentUser) {
         document.getElementById('lblUsuarioNombre').textContent = `${currentUser.nombres} ${currentUser.apellidos}`;

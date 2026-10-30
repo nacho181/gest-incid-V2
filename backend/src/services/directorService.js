@@ -5,10 +5,10 @@
  * ============================================================================
  */
 
-const incidenciaRepository = require('../repositories/incidenciaRepository');
-const usuarioRepository = require('../repositories/usuarioRepository');
-const emailService = require('../utils/emailService');
-const db = require('../config/db');
+import incidenciaRepository from '../repositories/incidenciaRepository.js';
+import usuarioRepository from '../repositories/usuarioRepository.js';
+import emailService from '../utils/emailService.js';
+import db from '../config/db.js';
 
 class DirectorService {
   async getDashboardSummary() {
@@ -107,4 +107,4 @@ class DirectorService {
   }
 }
 
-module.exports = new DirectorService();
+export default new DirectorService();

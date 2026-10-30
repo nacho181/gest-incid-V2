@@ -5,10 +5,10 @@
  * ============================================================================
  */
 
-const assert = require('assert');
-const http = require('http');
-const setupTestDb = require('./setupTestDb');
-const app = require('../src/server');
+import assert from 'assert';
+import http from 'http';
+import setupTestDb from './setupTestDb.js';
+import app from '../src/server.js';
 
 let server;
 

@@ -1,3 +1,7 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+@import "tom-select/dist/css/tom-select.bootstrap5.css";
+
 /* ==========================================================================
    MUNICIPALIDAD DE CONCORDIA - TEMA INSTITUCIONAL DE COLOR VERDE
    Hoja de estilos personalizada e integración con Bootstrap 5
@@ -23,7 +27,6 @@ body {
 
 /* --------------------------------------------------------------------------
    3. CLASES DE UTILIDAD
-   (Se mantiene !important sólo en utilidades de propósito único)
    -------------------------------------------------------------------------- */
 .bg-concordia-dark {
     background-color: var(--concordia-dark) !important;
@@ -76,7 +79,6 @@ body {
 
 /* --------------------------------------------------------------------------
    5. COMPONENTES: TABLAS
-   (Se elimina !important aumentando la especificidad del selector)
    -------------------------------------------------------------------------- */
 table.table thead.table-concordia,
 table.table thead.table-concordia tr,
@@ -88,7 +90,6 @@ table.table thead.table-concordia tr th {
 
 /* --------------------------------------------------------------------------
    6. COMPONENTES: PESTAÑAS (NAV-TABS)
-   (Se elimina !important mediante especificidad encadenada)
    -------------------------------------------------------------------------- */
 ul.nav-tabs li.nav-item .nav-link {
     border: none;
@@ -122,7 +123,6 @@ ul.nav-tabs li.nav-item .nav-link.active {
 
 /* --------------------------------------------------------------------------
    8. COMPONENTES: TARJETAS DE ARTÍCULOS
-   (Especificidad para remover !important en la sombra al pasar el cursor)
    -------------------------------------------------------------------------- */
 div.card.card-articulo,
 div.card.article-card {
@@ -150,4 +150,17 @@ div.card.article-card:hover {
     background-color: var(--concordia-primary) !important;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
     color: #ffffff !important;
+}
+
+/* Adjust Tom Select styling to match Concordia theme */
+.ts-control {
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+}
+.ts-wrapper.single .ts-control {
+    background-color: #fff;
+}
+.ts-wrapper.focus .ts-control {
+    border-color: var(--concordia-primary);
+    box-shadow: 0 0 0 0.25rem rgba(30, 107, 55, 0.25);
 }

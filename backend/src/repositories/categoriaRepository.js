@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const db = require('../config/db');
+import db from '../config/db.js';
 
 class CategoriaRepository {
   async findAll({ traerTodos = false, buscar = null } = {}) {
@@ -91,4 +91,4 @@ class CategoriaRepository {
   }
 }
 
-module.exports = new CategoriaRepository();
+export default new CategoriaRepository();

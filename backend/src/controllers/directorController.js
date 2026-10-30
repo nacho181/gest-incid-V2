@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const directorService = require('../services/directorService');
+import directorService from '../services/directorService.js';
 
 class DirectorController {
   async getDashboardSummary(req, res) {
@@ -93,4 +93,4 @@ class DirectorController {
   }
 }
 
-module.exports = new DirectorController();
+export default new DirectorController();

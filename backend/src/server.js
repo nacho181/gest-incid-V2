@@ -6,20 +6,27 @@
  * ============================================================================
  */
 
-const swaggerDocs = require('./utils/swagger');
-const express = require('express');
-const path = require('path');
-const cors = require('cors');
-const morgan = require('morgan');
-require('dotenv').config();
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
 
-const empleadoRoutes = require('./routes/empleadoRoutes');
-const authRoutes = require('./routes/authRoutes');
-const directorRoutes = require('./routes/directorRoutes');
-const sistemasRoutes = require('./routes/sistemasRoutes');
-const categoriaRoutes = require('./routes/categoriaRoutes');
-const articuloRoutes = require('./routes/articuloRoutes');
-const areaRoutes = require('./routes/areaRoutes');
+import swaggerDocs from './utils/swagger.js';
+import empleadoRoutes from './routes/empleadoRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import directorRoutes from './routes/directorRoutes.js';
+import sistemasRoutes from './routes/sistemasRoutes.js';
+import categoriaRoutes from './routes/categoriaRoutes.js';
+import articuloRoutes from './routes/articuloRoutes.js';
+import areaRoutes from './routes/areaRoutes.js';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -78,7 +85,7 @@ app.use('/api', (req, res) => {
 app.get(/^\/(?!api).*/, (req, res) => {
   const distIndex = path.join(__dirname, '../../frontend/dist/index.html');
   const srcIndex = path.join(__dirname, '../../frontend/index.html');
-  res.sendFile(require('fs').existsSync(distIndex) ? distIndex : srcIndex);
+  res.sendFile(fs.existsSync(distIndex) ? distIndex : srcIndex);
 });
 
 // ============================================================================
@@ -96,8 +103,7 @@ app.use((err, req, res, next) => {
 // INICIALIZACIÓN DEL SERVIDOR
 // ============================================================================
 
-// Iniciar el servidor únicamente si el archivo es ejecutado directamente
-if (require.main === module) {
+if (process.argv[1] && process.argv[1].endsWith('server.js')) {
   app.listen(PORT, () => {
     console.log(`====================================================`);
     console.log(`Servidor corriendo en el puerto ${PORT}`);
@@ -106,4 +112,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = app;
+export default app;

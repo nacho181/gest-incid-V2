@@ -5,9 +5,9 @@
  * ============================================================================
  */
 
-const incidenciaRepository = require('../repositories/incidenciaRepository');
-const emailService = require('../utils/emailService');
-const ROLES = require('../utils/roles');
+import incidenciaRepository from '../repositories/incidenciaRepository.js';
+import emailService from '../utils/emailService.js';
+import ROLES from '../utils/roles.js';
 
 class SistemasService {
   async getIncidenciasAsignadas(idUsuario) {
@@ -79,4 +79,4 @@ class SistemasService {
   }
 }
 
-module.exports = new SistemasService();
+export default new SistemasService();

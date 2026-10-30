@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const db = require('../config/db');
+import db from '../config/db.js';
 
 class UsuarioRepository {
   async findByUsuarioAndHash(usuario, contraseniaHash) {
@@ -65,4 +65,4 @@ class UsuarioRepository {
   }
 }
 
-module.exports = new UsuarioRepository();
+export default new UsuarioRepository();

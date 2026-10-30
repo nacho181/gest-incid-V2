@@ -1,21 +1,14 @@
 /**
  * ============================================================================
  * PRUEBAS DE INTEGRACIÓN: BREAD DE CATEGORÍAS Y ARTÍCULOS (ENTIDADES BASE)
- * Verificación completa de las operaciones:
- * - Browse (Listar con y sin inactivos)
- * - Read (Consultar por ID)
- * - Edit (Actualizar atributos)
- * - Add (Crear nuevos registros)
- * - Delete (Soft Delete - Borrado Lógico mediante campo activo = 0)
- * - Verificación explícita de NO borrado físico en base de datos
- * - Reactivación lógica de registros
+ * Verificación completa de las operaciones
  * ============================================================================
  */
 
-const assert = require('assert');
-const http = require('http');
-const setupTestDb = require('./setupTestDb');
-const app = require('../src/server');
+import assert from 'assert';
+import http from 'http';
+import setupTestDb from './setupTestDb.js';
+import app from '../src/server.js';
 
 let server;
 const PORT = 3003;
@@ -123,7 +116,7 @@ async function runTests() {
     assert.strictEqual(resDelCat.body.activo, 0, 'El campo activo debe actualizarse a 0 (soft delete)');
     console.log(`   ✅ Borrado lógico ejecutado para categoría #${idCatCreada}.`);
 
-    // 6. Verificar que NO hubo borrado físico (El registro sigue existiendo con activo = 0)
+    // 6. Verificar que NO hubo borrado físico
     console.log('Test 6: [Verificación Soft Delete] Comprobar persistencia con activo = 0...');
     const resCheckCat = await request('GET', `/api/v1/categorias/${idCatCreada}`, null, authHeaders);
     assert.strictEqual(resCheckCat.status, 200, 'El registro DEBE seguir existiendo en el sistema');

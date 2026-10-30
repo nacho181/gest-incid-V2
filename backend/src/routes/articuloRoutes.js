@@ -1,23 +1,17 @@
 /**
  * ============================================================================
  * RUTAS DE LA API - MÓDULO ARTÍCULOS (ENTIDADES BASE)
- * Endpoints REST para BREAD de Artículos:
- * - GET    /api/v1/articulos            (Browse)
- * - GET    /api/v1/articulos/:id        (Read)
- * - POST   /api/v1/articulos            (Add)
- * - PUT    /api/v1/articulos/:id        (Edit)
- * - PATCH  /api/v1/articulos/:id        (Edit)
- * - DELETE /api/v1/articulos/:id        (Delete - Borrado Lógico / Soft Delete)
- * - PUT    /api/v1/articulos/:id/reactivar (Reactivación lógica)
+ * Endpoints REST para BREAD de Artículos
  * ============================================================================
  */
 
-const express = require('express');
-const { body, validationResult } = require('express-validator');
+import express from 'express';
+import { body, validationResult } from 'express-validator';
+import articuloController from '../controllers/articuloController.js';
+import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
+import ROLES from '../utils/roles.js';
+
 const router = express.Router();
-const articuloController = require('../controllers/articuloController');
-const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
-const ROLES = require('../utils/roles');
 
 // Middleware estricto para validar token JWT y verificar roles del Área de Sistemas
 const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS)];
@@ -131,7 +125,7 @@ router.get('/', verificarLectura, articuloController.getArticulos);
 // READ: Obtener detalle de un artículo por ID
 router.get('/:id', verificarLectura, articuloController.getArticuloById);
 
-// ADD: Crear un nuevo artículo con validaciones estrictas
+// ADD: Crear un nuevo artículo con validaciones strictly
 router.post(
   '/',
   verificarAdmin,
@@ -209,4 +203,4 @@ router.delete('/:id', verificarAdmin, articuloController.eliminarArticulo);
 router.put('/:id/reactivar', verificarAdmin, articuloController.reactivarArticulo);
 router.patch('/:id/reactivar', verificarAdmin, articuloController.reactivarArticulo);
 
-module.exports = router;
+export default router;

@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const articuloService = require('../services/articuloService');
+import articuloService from '../services/articuloService.js';
 
 class ArticuloController {
   async getArticulos(req, res) {
@@ -100,4 +100,4 @@ class ArticuloController {
   }
 }
 
-module.exports = new ArticuloController();
+export default new ArticuloController();

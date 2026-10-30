@@ -5,11 +5,12 @@
  * ============================================================================
  */
 
-const express = require('express');
+import express from 'express';
+import directorController from '../controllers/directorController.js';
+import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
+import ROLES from '../utils/roles.js';
+
 const router = express.Router();
-const directorController = require('../controllers/directorController');
-const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
-const ROLES = require('../utils/roles');
 
 // Middleware estricto para validar token JWT y verificar el rol de Director de Sistemas (rol 3)
 const verificarDirector = [verificarToken, autorizarRol(ROLES.DIRECTOR)];
@@ -98,7 +99,6 @@ const verificarDirector = [verificarToken, autorizarRol(ROLES.DIRECTOR)];
  *         description: Datos estadísticos obtenidos
  */
 
-
 // Resumen del dashboard (totales por estado, totales por fecha, prioritarias)
 router.get('/dashboard', verificarDirector, directorController.getDashboardSummary);
 
@@ -117,4 +117,4 @@ router.put('/incidencias/:id/cancelar', verificarDirector, directorController.ca
 // Obtener datos para reportes estadísticos en PDF
 router.get('/reportes', verificarDirector, directorController.getReportesEstadisticos);
 
-module.exports = router;
+export default router;

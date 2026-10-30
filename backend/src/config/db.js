@@ -5,8 +5,12 @@
  * ============================================================================
  */
 
-const { Pool } = require('pg');
-require('dotenv').config();
+import pg from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const { Pool } = pg;
 
 // Configuración del pool con variables de entorno o valores por defecto
 const pool = new Pool({
@@ -27,7 +31,7 @@ pool.on('error', (err) => {
   console.error('Error inesperado en el cliente de PostgreSQL:', err);
 });
 
-module.exports = {
+export const db = {
   /**
    * Ejecuta una consulta SQL en la base de datos utilizando el pool.
    * @param {string} text - Consulta SQL parametrizada.
@@ -37,3 +41,5 @@ module.exports = {
   query: (text, params) => pool.query(text, params),
   pool,
 };
+
+export default db;

@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const sistemasService = require('../services/sistemasService');
+import sistemasService from '../services/sistemasService.js';
 
 class SistemasController {
   async getIncidenciasAsignadas(req, res) {
@@ -47,4 +47,4 @@ class SistemasController {
   }
 }
 
-module.exports = new SistemasController();
+export default new SistemasController();

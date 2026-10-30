@@ -6,7 +6,7 @@
  * ============================================================================
  */
 
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 /**
  * Crea y configura el transportador de Nodemailer.
@@ -36,7 +36,7 @@ function crearTransportador() {
   });
 }
 
-const transporter = crearTransportador();
+export const transporter = crearTransportador();
 
 /**
  * Plantilla HTML con diseño institucional de la Municipalidad de Concordia.
@@ -110,7 +110,7 @@ function generarPlantillaHtml({ titulo, badgeTipo, subtitulo, detalles, contenid
 /**
  * Envía un correo genérico con manejo seguro de errores.
  */
-async function enviarCorreo({ para, asunto, html, texto }) {
+export async function enviarCorreo({ para, asunto, html, texto }) {
   const remitente = process.env.EMAIL_FROM || '"Municipalidad de Concordia - Incidencias" <notificaciones@concordia.gob.ar>';
 
   try {
@@ -144,15 +144,8 @@ async function enviarCorreo({ para, asunto, html, texto }) {
 
 /**
  * Notifica al solicitante que su incidencia fue FINALIZADA por el personal de Sistemas.
- * @param {Object} datos
- * @param {Object} datos.incidencia - Información de la incidencia (id_incidencia, descripcion_pedido, etc.)
- * @param {string} datos.descripcionResolucion - Solución técnica aplicada.
- * @param {string} datos.tecnicoNombre - Nombre del empleado de sistemas que la resolvió.
- * @param {string} datos.destinatarioEmail - Correo electrónico del solicitante.
- * @param {string} datos.destinatarioNombre - Nombre del solicitante.
- * @param {string} [datos.articuloDescripcion] - Descripción del equipo/artículo involucrado.
  */
-async function notificarIncidenciaFinalizada({
+export async function notificarIncidenciaFinalizada({
   incidencia,
   descripcionResolucion,
   tecnicoNombre,
@@ -216,14 +209,8 @@ async function notificarIncidenciaFinalizada({
 
 /**
  * Notifica al solicitante que una incidencia fue CANCELADA.
- * @param {Object} datos
- * @param {Object} datos.incidencia - Información de la incidencia.
- * @param {string} datos.destinatarioEmail - Correo del solicitante.
- * @param {string} datos.destinatarioNombre - Nombre del solicitante.
- * @param {string} [datos.canceladoPorNombre] - Quién efectuó la cancelación.
- * @param {string} [datos.articuloDescripcion] - Descripción del artículo.
  */
-async function notificarIncidenciaCancelada({
+export async function notificarIncidenciaCancelada({
   incidencia,
   destinatarioEmail,
   destinatarioNombre,
@@ -275,7 +262,7 @@ async function notificarIncidenciaCancelada({
   });
 }
 
-module.exports = {
+export default {
   transporter,
   enviarCorreo,
   notificarIncidenciaFinalizada,

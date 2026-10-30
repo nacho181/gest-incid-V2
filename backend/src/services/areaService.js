@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const areaRepository = require('../repositories/areaRepository');
+import areaRepository from '../repositories/areaRepository.js';
 
 class AreaService {
   async getAreas() {
@@ -13,4 +13,4 @@ class AreaService {
   }
 }
 
-module.exports = new AreaService();
+export default new AreaService();

@@ -5,10 +5,10 @@
  * ============================================================================
  */
 
-const { uploadAvatar } = require('../middlewares/uploadMiddleware');
-const express = require('express');
+import express from 'express';
+import areaController from '../controllers/areaController.js';
+
 const router = express.Router();
-const areaController = require('../controllers/areaController');
 
 /**
  * @openapi
@@ -23,4 +23,5 @@ const areaController = require('../controllers/areaController');
 
 // Obtener lista de áreas
 router.get('/', areaController.getAreas);
-module.exports = router;
+
+export default router;

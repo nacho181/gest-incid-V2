@@ -5,12 +5,13 @@
  * ============================================================================
  */
 
-const db = require('../src/config/db');
-const { newDb, DataType } = require('pg-mem');
+import db from '../src/config/db.js';
+import pkgPgMem from 'pg-mem';
+const { newDb: createDb, DataType: Types } = pkgPgMem;
 
 let initialized = false;
 
-async function setupTestDb() {
+export async function setupTestDb() {
   if (initialized) return;
   initialized = true;
 
@@ -20,18 +21,18 @@ async function setupTestDb() {
   } catch (err) {
     if (err.code === 'ECONNREFUSED' || err.message.includes('connect ECONNREFUSED')) {
       console.log('[TEST SETUP] Servidor PostgreSQL no detectado. Inicializando base de datos en memoria para pruebas...');
-      const dbMem = newDb();
+      const dbMem = createDb();
 
       dbMem.public.registerFunction({
         name: 'to_char',
-        args: [DataType.timestamp, DataType.text],
-        returns: DataType.text,
+        args: [Types.timestamp, Types.text],
+        returns: Types.text,
         implementation: (ts, fmt) => ts ? new Date(ts).toISOString().slice(0, 10) : ''
       });
       dbMem.public.registerFunction({
         name: 'to_char',
-        args: [DataType.timestamptz, DataType.text],
-        returns: DataType.text,
+        args: [Types.timestamptz, Types.text],
+        returns: Types.text,
         implementation: (ts, fmt) => ts ? new Date(ts).toISOString().slice(0, 10) : ''
       });
 
@@ -130,4 +131,4 @@ async function setupTestDb() {
   }
 }
 
-module.exports = setupTestDb;
+export default setupTestDb;

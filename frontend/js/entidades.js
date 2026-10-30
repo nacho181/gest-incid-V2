@@ -160,6 +160,52 @@ function setupEventListeners() {
 
     // Botón ejecutar borrado lógico
     document.getElementById('btnEjecutarSoftDelete')?.addEventListener('click', ejecutarBorradoLogico);
+
+    // Delegación de eventos para la tabla de categorías
+    const tbodyCategorias = document.getElementById('tbodyCategorias');
+    if (tbodyCategorias) {
+        tbodyCategorias.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id ? parseInt(btn.dataset.id, 10) : null;
+            if (!id) return;
+
+            if (action === 'ver-detalle') {
+                verDetalleCategoria(id);
+            } else if (action === 'editar') {
+                abrirModalEditarCategoria(id);
+            } else if (action === 'baja-logica') {
+                const nombre = btn.dataset.nombre || '';
+                confirmarBajaLogica('categoria', id, nombre);
+            } else if (action === 'reactivar') {
+                reactivarCategoria(id);
+            }
+        });
+    }
+
+    // Delegación de eventos para la tabla de artículos
+    const tbodyArticulos = document.getElementById('tbodyArticulos');
+    if (tbodyArticulos) {
+        tbodyArticulos.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id ? parseInt(btn.dataset.id, 10) : null;
+            if (!id) return;
+
+            if (action === 'ver-detalle') {
+                verDetalleArticulo(id);
+            } else if (action === 'editar') {
+                abrirModalEditarArticulo(id);
+            } else if (action === 'baja-logica') {
+                const nombre = btn.dataset.nombre || '';
+                confirmarBajaLogica('articulo', id, nombre);
+            } else if (action === 'reactivar') {
+                reactivarArticulo(id);
+            }
+        });
+    }
 }
 
 // ============================================================================
@@ -212,18 +258,18 @@ function renderizarTablaCategorias(lista) {
                 <td class="fw-semibold text-dark">${escapeHtml(c.descripcion)}</td>
                 <td>${badgeEstado}</td>
                 <td class="text-end">
-                    <button class="btn btn-sm btn-outline-info me-1" onclick="verDetalleCategoria(${c.id_categoria})" title="Ver Detalle (Read)">
+                    <button class="btn btn-sm btn-outline-info me-1" data-action="ver-detalle" data-id="${c.id_categoria}" title="Ver Detalle (Read)">
                         <i class="bi bi-eye"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditarCategoria(${c.id_categoria})" title="Editar (Edit)">
+                    <button class="btn btn-sm btn-outline-primary me-1" data-action="editar" data-id="${c.id_categoria}" title="Editar (Edit)">
                         <i class="bi bi-pencil"></i>
                     </button>
                     ${esActivo ? `
-                        <button class="btn btn-sm btn-outline-danger" onclick="confirmarBajaLogica('categoria', ${c.id_categoria}, '${escapeHtml(c.descripcion)}')" title="Baja Lógica (Soft Delete)">
+                        <button class="btn btn-sm btn-outline-danger" data-action="baja-logica" data-id="${c.id_categoria}" data-nombre="${escapeHtml(c.descripcion)}" title="Baja Lógica (Soft Delete)">
                             <i class="bi bi-trash3"></i>
                         </button>
                     ` : `
-                        <button class="btn btn-sm btn-outline-success" onclick="reactivarCategoria(${c.id_categoria})" title="Reactivar">
+                        <button class="btn btn-sm btn-outline-success" data-action="reactivar" data-id="${c.id_categoria}" title="Reactivar">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar
                         </button>
                     `}
@@ -413,18 +459,18 @@ function renderizarTablaArticulos(lista) {
                 <td><span class="badge bg-light text-dark border">${escapeHtml(a.area_descripcion || 'Sin área')}</span></td>
                 <td>${badgeEstado}</td>
                 <td class="text-end">
-                    <button class="btn btn-sm btn-outline-info me-1" onclick="verDetalleArticulo(${a.id_articulo})" title="Ver Detalle (Read)">
+                    <button class="btn btn-sm btn-outline-info me-1" data-action="ver-detalle" data-id="${a.id_articulo}" title="Ver Detalle (Read)">
                         <i class="bi bi-eye"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="abrirModalEditarArticulo(${a.id_articulo})" title="Editar (Edit)">
+                    <button class="btn btn-sm btn-outline-primary me-1" data-action="editar" data-id="${a.id_articulo}" title="Editar (Edit)">
                         <i class="bi bi-pencil"></i>
                     </button>
                     ${esActivo ? `
-                        <button class="btn btn-sm btn-outline-danger" onclick="confirmarBajaLogica('articulo', ${a.id_articulo}, '${escapeHtml(a.descripcion)}')" title="Baja Lógica (Soft Delete)">
+                        <button class="btn btn-sm btn-outline-danger" data-action="baja-logica" data-id="${a.id_articulo}" data-nombre="${escapeHtml(a.descripcion)}" title="Baja Lógica (Soft Delete)">
                             <i class="bi bi-trash3"></i>
                         </button>
                     ` : `
-                        <button class="btn btn-sm btn-outline-success" onclick="reactivarArticulo(${a.id_articulo})" title="Reactivar">
+                        <button class="btn btn-sm btn-outline-success" data-action="reactivar" data-id="${a.id_articulo}" title="Reactivar">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar
                         </button>
                     `}

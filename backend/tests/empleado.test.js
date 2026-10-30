@@ -87,6 +87,7 @@ async function runTests() {
       descripcion_pedido: 'El mouse sin pilas no funciona'
     }, authHeaders);
     assert.strictEqual(resCreate.status, 201);
+    assert.strictEqual(resCreate.body.incidencia.asignado_a, null, 'Nueva incidencia debe tener asignado_a = null');
 
     // Pruebas 5: Listar incidencias creadas por el usuario autenticado
     console.log('Test 5: Listar mis incidencias...');

@@ -5,7 +5,10 @@
  */
 
 import * as bootstrap from 'bootstrap';
+import html2pdf from 'html2pdf.js';
+
 window.bootstrap = bootstrap;
+window.html2pdf = html2pdf;
 
 // URL Base de la API REST
 const API_BASE_URL = '/api/v1';

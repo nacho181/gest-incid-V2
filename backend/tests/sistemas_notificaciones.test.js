@@ -124,7 +124,22 @@ async function runTests() {
     });
     assert.strictEqual(resCrear.status, 201);
     const idIncidenciaNueva = resCrear.body.incidencia.id_incidencia;
-    console.log(`   ✅ Incidencia #${idIncidenciaNueva} creada exitosamente.`);
+    assert.strictEqual(resCrear.body.incidencia.asignado_a, null, 'Nuevas incidencias deben guardarse sin asignar (NULL)');
+    console.log(`   ✅ Incidencia #${idIncidenciaNueva} creada exitosamente con asignado_a = NULL.`);
+
+    // Asignar manualmente la incidencia al técnico Carlos Perez (sistemasUserId) como Director
+    const resLoginDirector = await request('POST', '/api/v1/auth/login', {
+      usuario: 'pamalm@correo.com',
+      contrasenia: 'pamalm'
+    });
+    const tokenDirector = resLoginDirector.body.token;
+    const resAsignar = await request('PUT', `/api/v1/director/incidencias/${idIncidenciaNueva}/asignar`, {
+      id_usuario_sistemas: sistemasUserId
+    }, {
+      'Authorization': `Bearer ${tokenDirector}`
+    });
+    assert.strictEqual(resAsignar.status, 200);
+    console.log(`   ✅ Incidencia #${idIncidenciaNueva} asignada manualmente al técnico Carlos Perez.`);
 
     // --------------------------------------------------------------------------
     // Test 7: Validación de campos obligatorios al finalizar (sin resolución)

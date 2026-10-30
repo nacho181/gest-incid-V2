@@ -71,7 +71,7 @@ export async function setupTestDb() {
             id_articulo INTEGER NOT NULL,
             id_estado INTEGER NOT NULL,
             creado_por INTEGER NOT NULL,
-            asignado_a INTEGER NOT NULL,
+            asignado_a INTEGER,
             creado TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
             prioridad INTEGER DEFAULT 1 NOT NULL,
             descripcion_pedido VARCHAR(250),

@@ -209,7 +209,7 @@ CREATE TABLE public.incidencias (
     id_articulo integer NOT NULL,
     id_estado integer NOT NULL,
     creado_por integer NOT NULL,
-    asignado_a integer NOT NULL,
+    asignado_a integer,
     creado timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     prioridad integer DEFAULT 1 NOT NULL,
     descripcion_pedido character varying(250),

@@ -28,7 +28,6 @@ class EmpleadoService {
     }
 
     const id_estado_inicial = 1; // Pendiente
-    const asignado_a_default = 1; // Default
     let client;
 
     try {
@@ -48,7 +47,7 @@ class EmpleadoService {
       const insert = await client.query(
         `INSERT INTO public.incidencias (id_articulo, id_estado, creado_por, asignado_a, prioridad, descripcion_pedido, descripcion_resolucion)
          VALUES ($1, $2, $3, $4, $5, $6, '') RETURNING *`,
-        [id_articulo, id_estado_inicial, idUsuario, asignado_a_default, prioridad || 1, descripcion_pedido]
+        [id_articulo, id_estado_inicial, idUsuario, null, prioridad || 1, descripcion_pedido]
       );
       const nueva = insert.rows[0];
 

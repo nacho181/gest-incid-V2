@@ -301,7 +301,7 @@ function inicializarTomSelect() {
     tomSelectArticulo = new TomSelect('#selectArticulo', {
         create: false,
         placeholder: '-- Seleccionar Artículo --',
-        allowEmptyOption: true,
+        allowEmptyOption: false,
         maxOptions: 500,
         sortField: {
             field: 'text',
@@ -328,7 +328,7 @@ async function cargarArticulos() {
                 tomSelectArticulo = null;
             }
 
-            selectArticulo.innerHTML = '<option value="">-- Seleccionar Artículo --</option>';
+            selectArticulo.innerHTML = '<option value="" selected></option>';
             listaArticulosCache.forEach(art => {
                 const option = document.createElement('option');
                 option.value = art.id_articulo;

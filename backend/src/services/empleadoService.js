@@ -20,7 +20,7 @@ class EmpleadoService {
     return await articuloRepository.findAll({ traerTodos: false });
   }
 
-  async crearIncidencia({ id_articulo, prioridad, descripcion_pedido, idUsuario }) {
+  async crearIncidencia({ id_articulo, prioridad, descripcion_pedido, idUsuario, asignado_a = null }) {
     if (!id_articulo || !descripcion_pedido) {
       const error = new Error('Faltan campos obligatorios: id_articulo y descripcion_pedido');
       error.statusCode = 400;
@@ -28,6 +28,7 @@ class EmpleadoService {
     }
 
     const id_estado_inicial = 1; // Pendiente
+    const idAsignado = (asignado_a !== undefined && asignado_a !== null) ? asignado_a : null;
     let client;
 
     try {
@@ -47,7 +48,7 @@ class EmpleadoService {
       const insert = await client.query(
         `INSERT INTO public.incidencias (id_articulo, id_estado, creado_por, asignado_a, prioridad, descripcion_pedido, descripcion_resolucion)
          VALUES ($1, $2, $3, $4, $5, $6, '') RETURNING *`,
-        [id_articulo, id_estado_inicial, idUsuario, null, prioridad || 1, descripcion_pedido]
+        [id_articulo, id_estado_inicial, idUsuario, idAsignado, prioridad || 1, descripcion_pedido]
       );
       const nueva = insert.rows[0];
 

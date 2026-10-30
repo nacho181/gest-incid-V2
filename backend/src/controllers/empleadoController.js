@@ -36,12 +36,15 @@ class EmpleadoController {
     try {
       const { id_articulo, prioridad, descripcion_pedido } = req.body;
       const idUsuario = req.usuario.id_usuario;
+      // Por requerimiento de negocio, todo nuevo ticket debe iniciar sin responsable asignado (NULL)
+      const asignado_a = null;
 
       const nuevaIncidencia = await empleadoService.crearIncidencia({
         id_articulo,
         prioridad,
         descripcion_pedido,
-        idUsuario
+        idUsuario,
+        asignado_a
       });
 
       return res.status(201).json({

@@ -1,14 +1,16 @@
-const multer = require('multer');
-const path = require('path');
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configurar dónde y con qué nombre se guardan los archivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // La ruta relativa apunta a la carpeta que creaste en el paso 1
     cb(null, path.join(__dirname, '../../public/uploads/avatars'));
   },
   filename: function (req, file, cb) {
-    // Generar un nombre único: avatar-163456789.jpg
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     cb(null, 'avatar-' + uniqueSuffix + ext);
@@ -25,10 +27,10 @@ const fileFilter = (req, file, cb) => {
 };
 
 // Límite de 2MB por archivo
-const uploadAvatar = multer({ 
+export const uploadAvatar = multer({
   storage: storage, 
   fileFilter: fileFilter,
   limits: { fileSize: 2 * 1024 * 1024 } 
 });
 
-module.exports = { uploadAvatar };
+export default { uploadAvatar };

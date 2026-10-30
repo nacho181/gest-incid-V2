@@ -1,18 +1,13 @@
 /**
  * ============================================================================
  * PRUEBAS DE INTEGRACIÓN - MÓDULO SISTEMAS Y NOTIFICACIONES
- * Valida:
- * 1. Autenticación y control de acceso (RBAC) para el rol Empleado de Sistemas (rol 2).
- * 2. Listado de incidencias asignadas a su cargo.
- * 3. Finalización de incidencias con descripción de resolución técnica.
- * 4. Envío de correos electrónicos al finalizar y cancelar incidencias.
  * ============================================================================
  */
 
-const assert = require('assert');
-const http = require('http');
-const setupTestDb = require('./setupTestDb');
-const app = require('../src/server');
+import assert from 'assert';
+import http from 'http';
+import setupTestDb from './setupTestDb.js';
+import app from '../src/server.js';
 
 let server;
 
@@ -134,7 +129,7 @@ async function runTests() {
     // --------------------------------------------------------------------------
     // Test 7: Validación de campos obligatorios al finalizar (sin resolución)
     // --------------------------------------------------------------------------
-    console.log('\nTest 7: Intentar finalizar sin descripción de resolución (400 Bad Request)...');
+    console.log('\nTest 8: Intentar finalizar sin descripción de resolución (400 Bad Request)...');
     const resFinVacia = await request('PUT', `/api/v1/sistemas/incidencias/${idIncidenciaNueva}/finalizar`, {
       descripcion_resolucion: ''
     }, {

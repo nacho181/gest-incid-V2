@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const db = require('../config/db');
+import db from '../config/db.js';
 
 class IncidenciaRepository {
   async getClient() {
@@ -211,4 +211,4 @@ class IncidenciaRepository {
   }
 }
 
-module.exports = new IncidenciaRepository();
+export default new IncidenciaRepository();

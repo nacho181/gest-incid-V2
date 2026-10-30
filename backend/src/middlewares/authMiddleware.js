@@ -5,12 +5,12 @@
  * ============================================================================
  */
 
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 /**
  * Middleware para validar el token JWT en el header Authorization.
  */
-const verificarToken = (req, res, next) => {
+export const verificarToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -39,7 +39,7 @@ const verificarToken = (req, res, next) => {
  * Middleware para validar los roles permitidos en el endpoint.
  * @param  {...number} rolesPermitidos - Lista de IDs de roles autorizados (ej: 1, 2, 3)
  */
-const autorizarRol = (...rolesPermitidos) => {
+export const autorizarRol = (...rolesPermitidos) => {
   return (req, res, next) => {
     if (!req.usuario) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -56,7 +56,7 @@ const autorizarRol = (...rolesPermitidos) => {
   };
 };
 
-module.exports = {
+export default {
   verificarToken,
   autorizarRol
 };

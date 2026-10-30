@@ -1,23 +1,17 @@
 /**
  * ============================================================================
  * RUTAS DE LA API - MÓDULO CATEGORÍAS (ENTIDADES BASE)
- * Endpoints REST para BREAD de Categorías:
- * - GET    /api/v1/categorias            (Browse)
- * - GET    /api/v1/categorias/:id        (Read)
- * - POST   /api/v1/categorias            (Add)
- * - PUT    /api/v1/categorias/:id        (Edit)
- * - PATCH  /api/v1/categorias/:id        (Edit)
- * - DELETE /api/v1/categorias/:id        (Delete - Borrado Lógico / Soft Delete)
- * - PUT    /api/v1/categorias/:id/reactivar (Reactivación lógica)
+ * Endpoints REST para BREAD de Categorías
  * ============================================================================
  */
 
-const express = require('express');
-const { body, validationResult } = require('express-validator');
+import express from 'express';
+import { body, validationResult } from 'express-validator';
+import categoriaController from '../controllers/categoriaController.js';
+import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
+import ROLES from '../utils/roles.js';
+
 const router = express.Router();
-const categoriaController = require('../controllers/categoriaController');
-const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
-const ROLES = require('../utils/roles');
 
 // Middleware estricto para validar token JWT y verificar roles del Área de Sistemas
 const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS)];
@@ -30,7 +24,6 @@ const validarCampos = (req, res, next) => {
   }
   next();
 };
-
 
 /**
  * @openapi
@@ -130,7 +123,7 @@ router.post(
       .trim()
       .notEmpty().withMessage('La descripción es obligatoria')
       .isLength({ min: 3, max: 255 }).withMessage('La descripción debe tener entre 3 y 255 caracteres')
-      .escape(), // Sanitización contra inyección de código (XSS)
+      .escape(),
     validarCampos
   ],
   categoriaController.crearCategoria
@@ -181,4 +174,4 @@ router.delete('/:id', verificarAdmin, categoriaController.eliminarCategoria);
 router.put('/:id/reactivar', verificarAdmin, categoriaController.reactivarCategoria);
 router.patch('/:id/reactivar', verificarAdmin, categoriaController.reactivarCategoria);
 
-module.exports = router;
+export default router;

@@ -6,11 +6,12 @@
  * ============================================================================
  */
 
-const express = require('express');
+import express from 'express';
+import sistemasController from '../controllers/sistemasController.js';
+import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
+import ROLES from '../utils/roles.js';
+
 const router = express.Router();
-const sistemasController = require('../controllers/sistemasController');
-const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
-const ROLES = require('../utils/roles');
 
 // Middleware para verificar token JWT y autorizar roles de sistemas (2 = Empleado de Sistemas, 3 = Director)
 const verificarSistemas = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.DIRECTOR)];
@@ -59,4 +60,4 @@ router.get('/incidencias', verificarSistemas, sistemasController.getIncidenciasA
 // Finalizar una incidencia asignada cargando la solución técnica y notificando por correo
 router.put('/incidencias/:id/finalizar', verificarSistemas, sistemasController.finalizarIncidencia);
 
-module.exports = router;
+export default router;

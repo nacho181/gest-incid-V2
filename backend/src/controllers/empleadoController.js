@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const empleadoService = require('../services/empleadoService');
+import empleadoService from '../services/empleadoService.js';
 
 class EmpleadoController {
   async getEmpleados(req, res) {
@@ -89,4 +89,4 @@ class EmpleadoController {
   }
 }
 
-module.exports = new EmpleadoController();
+export default new EmpleadoController();

@@ -1,14 +1,11 @@
 /**
  * ============================================================================
  * MUNICIPALIDAD DE CONCORDIA - GESTIÓN DE ENTIDADES BASE
- * Lógica de cliente para BREAD completo de Categorías y Artículos:
- * - Browse (Listados interactivos con filtros y búsqueda en tiempo real)
- * - Read (Visualización detallada por ID en modales de Bootstrap)
- * - Edit (Actualización de registros)
- * - Add (Creación de nuevos registros)
- * - Delete (Soft delete / Borrado lógico mediante activo = 0)
  * ============================================================================
  */
+
+import * as bootstrap from 'bootstrap';
+window.bootstrap = bootstrap;
 
 const API_BASE_URL = '/api/v1';
 const TOKEN = localStorage.getItem('jwt_token') || localStorage.getItem('token');

@@ -5,11 +5,12 @@
  * ============================================================================
  */
 
-const express = require('express');
+import express from 'express';
+import empleadoController from '../controllers/empleadoController.js';
+import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
+import ROLES from '../utils/roles.js';
+
 const router = express.Router();
-const empleadoController = require('../controllers/empleadoController');
-const { verificarToken, autorizarRol } = require('../middlewares/authMiddleware');
-const ROLES = require('../utils/roles');
 
 // Middleware para que cualquier empleado logueado pueda operar
 const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS, ROLES.MUNICIPAL)];
@@ -67,7 +68,6 @@ const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
  *         description: Incidencia cancelada
  */
 
-
 // Obtener la lista de usuarios/empleados municipales
 router.get('/usuarios/empleados', verificarEmpleado, empleadoController.getEmpleados);
 
@@ -80,4 +80,4 @@ router.get('/incidencias/mis-incidencias', verificarEmpleado, empleadoController
 // Cancelar una incidencia propia en estado Pendiente
 router.put('/incidencias/:id/cancelar', verificarEmpleado, empleadoController.cancelarIncidencia);
 
-module.exports = router;
+export default router;

@@ -5,11 +5,11 @@
  * ============================================================================
  */
 
-const usuarioRepository = require('../repositories/usuarioRepository');
-const articuloRepository = require('../repositories/articuloRepository');
-const incidenciaRepository = require('../repositories/incidenciaRepository');
-const emailService = require('../utils/emailService');
-const db = require('../config/db');
+import usuarioRepository from '../repositories/usuarioRepository.js';
+import articuloRepository from '../repositories/articuloRepository.js';
+import incidenciaRepository from '../repositories/incidenciaRepository.js';
+import emailService from '../utils/emailService.js';
+import db from '../config/db.js';
 
 class EmpleadoService {
   async getEmpleados() {
@@ -151,4 +151,4 @@ class EmpleadoService {
   }
 }
 
-module.exports = new EmpleadoService();
+export default new EmpleadoService();

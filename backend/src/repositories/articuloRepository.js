@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const db = require('../config/db');
+import db from '../config/db.js';
 
 class ArticuloRepository {
   async findAll({ traerTodos = false, id_categoria = null, id_area = null, buscar = null } = {}) {
@@ -113,4 +113,4 @@ class ArticuloRepository {
   }
 }
 
-module.exports = new ArticuloRepository();
+export default new ArticuloRepository();

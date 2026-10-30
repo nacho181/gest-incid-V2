@@ -1,28 +1,41 @@
 /**
  * ============================================================================
- * LÓGICA DEL PANEL DE EMPLEADO DE SISTEMAS - MUNICIPALIDAD DE CONCORDIA
- * Módulo: Incidencias - Sistemas y Notificaciones.
- * - Carga de incidencias asignadas al técnico autenticado
- * - Finalización de incidencias con registro de resolución técnica
- * - Notificación por correo electrónico y feedback en tiempo real
+ * MUNICIPALIDAD DE CONCORDIA - PANEL DEL EMPLEADO DE SISTEMAS
  * ============================================================================
  */
 
+import * as bootstrap from 'bootstrap';
+window.bootstrap = bootstrap;
+
 const API_BASE_URL = '/api/v1';
 
-let authToken = localStorage.getItem('jwt_token') || localStorage.getItem('token');
-let currentUser = null;
-let incidenciasAsignadas = [];
-let filtroActual = 'todos';
+// Estado global de la vista
+let tokenJWT = localStorage.getItem('jwt_token') || localStorage.getItem('token') || '';
+let incidenciasCache = [];
+let filtroEstadoActual = 'todos';
+let idIncidenciaSeleccionadaModal = null;
 
-// Elementos de la interfaz
+// Referencias a Modales y Notificaciones de Bootstrap
 let modalFinalizarBs = null;
 let modalVerResolucionBs = null;
 let toastBs = null;
-let incidenciaSeleccionada = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inicializar componentes de Bootstrap
+    // 1. Validar autenticación de usuario con rol 2 (Empleado de Sistemas) o rol 1 (Director)
+    let userData = null;
+    try {
+        userData = JSON.parse(localStorage.getItem('user_data') || '{}');
+    } catch (e) {
+        userData = null;
+    }
+
+    if (!tokenJWT || !userData || (userData.rol !== 2 && userData.rol !== 1)) {
+        console.warn('Acceso restringido: Se requiere rol de Empleado de Sistemas');
+        window.location.href = 'index.html';
+        return;
+    }
+
+    // 2. Inicializar modales y componentes de Bootstrap
     const modalFinalizarEl = document.getElementById('modalFinalizar');
     if (modalFinalizarEl && window.bootstrap) {
         modalFinalizarBs = new bootstrap.Modal(modalFinalizarEl);
@@ -38,34 +51,77 @@ document.addEventListener('DOMContentLoaded', () => {
         toastBs = new bootstrap.Toast(toastEl, { delay: 4000 });
     }
 
-    // 2. Validar autenticación y rol de Sistemas (rol 2 o 3)
-    if (!validarSesion()) {
-        return;
+    // 3. Cargar datos del usuario en la cabecera
+    const lblNombre = document.getElementById('lblSistemasNombre');
+    if (lblNombre && userData.nombres) {
+        lblNombre.textContent = `${userData.nombres} ${userData.apellidos || ''}`.trim();
     }
 
-    // 3. Vincular eventos de la interfaz
-    document.getElementById('btnLogoutSistemas')?.addEventListener('click', cerrarSesion);
-    document.getElementById('btnRefrescar')?.addEventListener('click', () => cargarIncidenciasAsignadas());
-    document.getElementById('formFinalizarIncidencia')?.addEventListener('submit', finalizarIncidenciaSubmit);
+    // 4. Cargar incidencias asignadas
+    cargarIncidenciasAsignadas();
 
-    // Eventos de los botones de filtro
-    document.querySelectorAll('[data-filter]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
-            e.currentTarget.classList.add('active');
-            filtroActual = e.currentTarget.getAttribute('data-filter');
-            renderizarTabla();
+    // 5. Configurar Event Listeners
+    setupEventListenersSistemas();
+});
+
+function getAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    if (tokenJWT) {
+        headers['Authorization'] = `Bearer ${tokenJWT}`;
+    }
+    return headers;
+}
+
+function setupEventListenersSistemas() {
+    // Cerrar sesión
+    const btnLogout = document.getElementById('btnLogoutSistemas');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user_data');
+            localStorage.removeItem('usuario');
+            window.location.href = 'index.html';
         });
-    });
+    }
 
-    // Delegación de eventos para la tabla de incidencias asignadas
-    const tbodyIncidenciasSistemas = document.getElementById('tbodyIncidenciasSistemas');
-    if (tbodyIncidenciasSistemas) {
-        tbodyIncidenciasSistemas.addEventListener('click', (e) => {
+    // Refrescar listado
+    const btnRefrescar = document.getElementById('btnRefrescar');
+    if (btnRefrescar) {
+        btnRefrescar.addEventListener('click', () => {
+            cargarIncidenciasAsignadas();
+            mostrarToast('Listado de incidencias actualizado', 'info');
+        });
+    }
+
+    // Filtros rápidos
+    const btnGroup = document.querySelector('.btn-group[aria-label="Filtro de Estado"]');
+    if (btnGroup) {
+        btnGroup.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                btnGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                filtroEstadoActual = e.target.dataset.filter || 'todos';
+                aplicarFiltroYRenderizar();
+            }
+        });
+    }
+
+    // Formulario de finalización de incidencia
+    const formFinalizar = document.getElementById('formFinalizarIncidencia');
+    if (formFinalizar) {
+        formFinalizar.addEventListener('submit', enviarFinalizacionIncidencia);
+    }
+
+    // Delegación de eventos para la tabla
+    const tbody = document.getElementById('tbodyIncidenciasSistemas');
+    if (tbody) {
+        tbody.addEventListener('click', (e) => {
             const btn = e.target.closest('button');
             if (!btn) return;
+
             const action = btn.dataset.action;
-            const id = btn.dataset.id ? parseInt(btn.dataset.id, 10) : null;
+            const id = parseInt(btn.dataset.id, 10);
             if (!id) return;
 
             if (action === 'finalizar') {
@@ -75,364 +131,242 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // 4. Cargar incidencias iniciales
-    cargarIncidenciasAsignadas();
-});
-
-/**
- * Valida la existencia del token y asegura que el rol pertenezca al área de Sistemas.
- */
-function validarSesion() {
-    const userStr = localStorage.getItem('usuario');
-    if (!authToken || !userStr) {
-        window.location.href = 'index.html';
-        return false;
-    }
-
-    try {
-        currentUser = JSON.parse(userStr);
-        if (currentUser.rol !== 2 && currentUser.rol !== 1) {
-            alert('Acceso restringido: Se requieren permisos del Área de Sistemas.');
-            window.location.href = 'index.html';
-            return false;
-        }
-
-        // Mostrar nombre y rol en el encabezado
-        const lblNombre = document.getElementById('lblSistemasNombre');
-        const lblRol = document.getElementById('lblSistemasRol');
-        if (lblNombre) lblNombre.textContent = `${currentUser.nombres} ${currentUser.apellidos}`;
-        if (lblRol) lblRol.textContent = currentUser.rol === 1 ? 'Director de Sistemas' : 'Empleado de Sistemas';
-
-        return true;
-    } catch (e) {
-        localStorage.clear();
-        window.location.href = 'index.html';
-        return false;
-    }
 }
 
-/**
- * Petición con cabecera de autenticación JWT.
- */
-async function fetchConAuth(url, options = {}) {
-    options.headers = options.headers || {};
-    options.headers['Authorization'] = `Bearer ${authToken}`;
-    return fetch(url, options);
-}
-
-/**
- * Obtiene las incidencias asignadas al técnico autenticado desde la API REST.
- */
 async function cargarIncidenciasAsignadas() {
-    const tbody = document.getElementById('tbodyIncidenciasSistemas');
-    if (tbody) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" class="text-center text-muted py-5">
-                    <div class="spinner-border spinner-border-sm text-concordia me-2" role="status"></div>
-                    Cargando incidencias asignadas...
-                </td>
-            </tr>
-        `;
-    }
-
-    try {
-        const response = await fetchConAuth(`${API_BASE_URL}/sistemas/incidencias`);
-
-        if (response.status === 401 || response.status === 403) {
-            mostrarToast('Sesión inválida o permisos insuficientes', 'danger');
-            setTimeout(() => { cerrarSesion(); }, 1500);
-            return;
-        }
-
-        if (!response.ok) {
-            throw new Error('Error al obtener la lista de incidencias');
-        }
-
-        incidenciasAsignadas = await response.json();
-        actualizarMetricas();
-        renderizarTabla();
-
-    } catch (error) {
-        console.error('Error cargando incidencias asignadas:', error);
-        mostrarToast(error.message, 'danger');
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center text-danger py-4">
-                        <i class="bi bi-exclamation-triangle me-1"></i> No se pudieron cargar las incidencias. Por favor, reintenta.
-                    </td>
-                </tr>
-            `;
-        }
-    }
-}
-
-/**
- * Calcula y actualiza las tarjetas de métricas numéricas.
- */
-function actualizarMetricas() {
-    const total = incidenciasAsignadas.length;
-    const pendientes = incidenciasAsignadas.filter(i => i.id_estado === 1).length;
-    const enProceso = incidenciasAsignadas.filter(i => i.id_estado === 2).length;
-    const resueltas = incidenciasAsignadas.filter(i => i.id_estado === 3).length;
-
-    const elTotal = document.getElementById('metricTotal');
-    const elPendientes = document.getElementById('metricPendientes');
-    const elEnProceso = document.getElementById('metricEnProceso');
-    const elResueltas = document.getElementById('metricResueltas');
-
-    if (elTotal) elTotal.textContent = total;
-    if (elPendientes) elPendientes.textContent = pendientes;
-    if (elEnProceso) elEnProceso.textContent = enProceso;
-    if (elResueltas) elResueltas.textContent = resueltas;
-}
-
-/**
- * Renderiza el cuerpo de la tabla con los datos filtrados.
- */
-function renderizarTabla() {
     const tbody = document.getElementById('tbodyIncidenciasSistemas');
     if (!tbody) return;
 
-    let lista = [...incidenciasAsignadas];
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="8" class="text-center text-muted py-5">
+                <div class="spinner-border spinner-border-sm text-concordia me-2" role="status"></div>
+                Cargando incidencias asignadas...
+            </td>
+        </tr>
+    `;
 
-    if (filtroActual === 'pendientes') {
-        lista = lista.filter(i => i.id_estado === 1);
-    } else if (filtroActual === 'proceso') {
-        lista = lista.filter(i => i.id_estado === 2);
-    } else if (filtroActual === 'resueltas') {
-        lista = lista.filter(i => i.id_estado === 3);
-    }
+    try {
+        const response = await fetch(`${API_BASE_URL}/sistemas/incidencias`, {
+            headers: getAuthHeaders()
+        });
 
-    const lblCantidad = document.getElementById('lblCantidadFiltrada');
-    if (lblCantidad) {
-        lblCantidad.textContent = `Mostrando ${lista.length} de ${incidenciasAsignadas.length} incidencias`;
-    }
+        if (!response.ok) {
+            throw new Error('Error al consultar incidencias asignadas');
+        }
 
-    if (lista.length === 0) {
+        incidenciasCache = await response.json();
+        actualizarMetricasCards(incidenciasCache);
+        aplicarFiltroYRenderizar();
+
+    } catch (error) {
+        console.error('Error cargando incidencias asignadas:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center text-muted py-5">
-                    <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
-                    No se encontraron incidencias en esta categoría.
+                <td colspan="8" class="text-center text-danger py-4">
+                    Error al conectar con la API REST de Sistemas. Verifique su conexión o sesión.
                 </td>
             </tr>
         `;
+    }
+}
+
+function actualizarMetricasCards(incidencias) {
+    let total = incidencias.length;
+    let pend = 0;
+    let proc = 0;
+    let res = 0;
+
+    incidencias.forEach(inc => {
+        const est = (inc.estado_descripcion || '').toLowerCase();
+        if (est.includes('pendiente') || inc.id_estado === 1) pend++;
+        else if (est.includes('proceso') || inc.id_estado === 2) proc++;
+        else if (est.includes('resuel') || est.includes('finaliz') || inc.id_estado === 3) res++;
+    });
+
+    document.getElementById('metricTotal').textContent = total;
+    document.getElementById('metricPendientes').textContent = pend;
+    document.getElementById('metricEnProceso').textContent = proc;
+    document.getElementById('metricResueltas').textContent = res;
+}
+
+function aplicarFiltroYRenderizar() {
+    let filtradas = [...incidenciasCache];
+
+    if (filtroEstadoActual === 'pendientes') {
+        filtradas = filtradas.filter(inc => inc.id_estado === 1 || (inc.estado_descripcion || '').toLowerCase().includes('pendiente'));
+    } else if (filtroEstadoActual === 'proceso') {
+        filtradas = filtradas.filter(inc => inc.id_estado === 2 || (inc.estado_descripcion || '').toLowerCase().includes('proceso'));
+    } else if (filtroEstadoActual === 'resueltas') {
+        filtradas = filtradas.filter(inc => inc.id_estado === 3 || (inc.estado_descripcion || '').toLowerCase().includes('resuel'));
+    }
+
+    const lbl = document.getElementById('lblCantidadFiltrada');
+    if (lbl) {
+        lbl.textContent = `Mostrando ${filtradas.length} de ${incidenciasCache.length} incidencias`;
+    }
+
+    renderizarTablaSistemas(filtradas);
+}
+
+function renderizarTablaSistemas(lista) {
+    const tbody = document.getElementById('tbodyIncidenciasSistemas');
+    if (!tbody) return;
+
+    if (!lista || lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5">No existen incidencias en esta categoría.</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = '';
-
-    lista.forEach(inc => {
-        const tr = document.createElement('tr');
-
-        // Formato de Estado
-        let badgeEstado = '';
-        const estDesc = (inc.estado_descripcion || '').toLowerCase();
-        if (inc.id_estado === 1 || estDesc.includes('pendiente')) {
-            badgeEstado = `<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pendiente</span>`;
-        } else if (inc.id_estado === 2 || estDesc.includes('proceso')) {
-            badgeEstado = `<span class="badge bg-info text-dark"><i class="bi bi-tools me-1"></i>En Proceso</span>`;
-        } else if (inc.id_estado === 3 || estDesc.includes('resuel') || estDesc.includes('finaliz')) {
-            badgeEstado = `<span class="badge bg-success"><i class="bi bi-check2-circle me-1"></i>Resuelta</span>`;
-        } else if (inc.id_estado === 4 || estDesc.includes('cancel')) {
-            badgeEstado = `<span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>Cancelada</span>`;
-        } else {
-            badgeEstado = `<span class="badge bg-light text-dark">${escapeHtml(inc.estado_descripcion || 'Sin estado')}</span>`;
-        }
-
-        // Formato de Prioridad
-        let badgePrioridad = '';
-        if (inc.prioridad === 1) {
-            badgePrioridad = `<span class="badge bg-danger">Alta</span>`;
-        } else if (inc.prioridad === 2) {
-            badgePrioridad = `<span class="badge bg-warning text-dark">Media</span>`;
-        } else {
-            badgePrioridad = `<span class="badge bg-info text-dark">Baja</span>`;
-        }
-
-        // Formato de Fecha
-        const fecha = new Date(inc.creado).toLocaleDateString('es-AR', {
-            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    tbody.innerHTML = lista.map(inc => {
+        const fechaFmt = new Date(inc.creado).toLocaleDateString('es-AR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
 
-        // Solicitante
-        const solicitanteInfo = `
-            <div class="fw-bold text-dark small">${escapeHtml(inc.usuario_creador || 'Solicitante')}</div>
-            <div class="text-muted" style="font-size: 11px;">
-                <span class="badge bg-light text-muted border">${escapeHtml(inc.area_solicitante || 'Área')}</span>
-                ${inc.usuario_creador_email ? `&bull; ${escapeHtml(inc.usuario_creador_email)}` : ''}
-            </div>
-        `;
+        // Badge Prioridad
+        let badgePrio = '<span class="badge bg-info text-dark">Baja</span>';
+        if (inc.prioridad === 1) badgePrio = '<span class="badge bg-danger">Alta</span>';
+        else if (inc.prioridad === 2) badgePrio = '<span class="badge bg-warning text-dark">Media</span>';
 
-        // Columna de Acciones
-        let accionesHtml = '';
-        if (inc.id_estado === 1 || inc.id_estado === 2) {
-            accionesHtml = `
-                <button class="btn btn-sm btn-concordia fw-semibold py-1 px-2" data-action="finalizar" data-id="${inc.id_incidencia}">
-                    <i class="bi bi-check2-square me-1"></i> Finalizar
-                </button>
-            `;
-        } else if (inc.id_estado === 3) {
-            accionesHtml = `
-                <button class="btn btn-sm btn-outline-success fw-semibold py-1 px-2" data-action="ver-resolucion" data-id="${inc.id_incidencia}">
-                    <i class="bi bi-eye me-1"></i> Ver Solución
-                </button>
-            `;
-        } else {
-            accionesHtml = `<span class="text-muted small">Sin acciones</span>`;
+        // Badge Estado
+        const estDesc = (inc.estado_descripcion || 'Pendiente').toLowerCase();
+        let badgeEst = '<span class="badge bg-secondary">Desconocido</span>';
+        if (estDesc.includes('pendiente') || inc.id_estado === 1) {
+            badgeEst = '<span class="badge bg-warning text-dark">Pendiente</span>';
+        } else if (estDesc.includes('proceso') || inc.id_estado === 2) {
+            badgeEst = '<span class="badge bg-info text-dark">En Proceso</span>';
+        } else if (estDesc.includes('resuel') || estDesc.includes('finaliz') || inc.id_estado === 3) {
+            badgeEst = '<span class="badge bg-success">Resuelta</span>';
+        } else if (estDesc.includes('cancel') || inc.id_estado === 4) {
+            badgeEst = '<span class="badge bg-secondary">Cancelada</span>';
         }
 
-        tr.innerHTML = `
-            <td class="fw-bold text-concordia-dark">#${inc.id_incidencia}</td>
-            <td class="text-muted small">${fecha}</td>
-            <td>${solicitanteInfo}</td>
-            <td class="fw-semibold small">${escapeHtml(inc.articulo_descripcion || 'Artículo')}</td>
-            <td class="small text-muted" style="max-width: 260px;">${escapeHtml(inc.descripcion_pedido || '')}</td>
-            <td>${badgePrioridad}</td>
-            <td>${badgeEstado}</td>
-            <td class="text-end">${accionesHtml}</td>
-        `;
+        const esFinalizada = (inc.id_estado === 3 || estDesc.includes('resuel') || estDesc.includes('finaliz'));
+        const esCancelada = (inc.id_estado === 4 || estDesc.includes('cancel'));
 
-        tbody.appendChild(tr);
-    });
+        let botonAccion = '';
+        if (esFinalizada) {
+            botonAccion = `<button data-action="ver-resolucion" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-success fw-semibold"><i class="bi bi-eye me-1"></i> Ver Solución</button>`;
+        } else if (esCancelada) {
+            botonAccion = `<span class="text-muted small">Cancelada</span>`;
+        } else {
+            botonAccion = `<button data-action="finalizar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-concordia fw-bold"><i class="bi bi-check2-circle me-1"></i> Finalizar Ticket</button>`;
+        }
+
+        return `
+            <tr>
+                <td class="fw-bold">#${inc.id_incidencia}</td>
+                <td class="small text-muted">${fechaFmt}</td>
+                <td class="small">
+                    <div class="fw-bold text-dark">${escapeHtml(inc.usuario_creador || 'Empleado')}</div>
+                    <div class="text-muted text-truncate" style="max-width: 140px;">${escapeHtml(inc.area_solicitante || 'Área Municipal')}</div>
+                </td>
+                <td class="fw-semibold small">${escapeHtml(inc.articulo_descripcion || 'Artículo')}</td>
+                <td class="small text-wrap" style="max-width: 220px;">${escapeHtml(inc.descripcion_pedido || '')}</td>
+                <td>${badgePrio}</td>
+                <td>${badgeEst}</td>
+                <td class="text-end">${botonAccion}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
-/**
- * Abre el modal para ingresar la resolución y finalizar la incidencia.
- */
-window.abrirModalFinalizar = function(idIncidencia) {
-    const inc = incidenciasAsignadas.find(i => i.id_incidencia === idIncidencia);
+function abrirModalFinalizar(idIncidencia) {
+    const inc = incidenciasCache.find(i => i.id_incidencia === idIncidencia);
     if (!inc) return;
 
-    incidenciaSeleccionada = inc;
+    idIncidenciaSeleccionadaModal = idIncidencia;
 
-    document.getElementById('modalIncidenciaId').textContent = inc.id_incidencia;
-    document.getElementById('modalSolicitante').textContent = `${inc.usuario_creador || 'Solicitante'} (${inc.usuario_creador_email || ''})`;
+    document.getElementById('modalIncidenciaId').textContent = idIncidencia;
+    document.getElementById('modalSolicitante').textContent = `${inc.usuario_creador || 'Empleado'} (${inc.area_solicitante || 'Área Municipal'})`;
     document.getElementById('modalArticulo').textContent = inc.articulo_descripcion || 'Artículo';
-    document.getElementById('modalDescripcion').textContent = inc.descripcion_pedido || 'Sin detalles';
-
-    const txtRes = document.getElementById('txtResolucion');
-    if (txtRes) txtRes.value = '';
+    document.getElementById('modalDescripcion').textContent = inc.descripcion_pedido || 'Sin descripción';
+    document.getElementById('txtResolucion').value = '';
 
     if (modalFinalizarBs) {
         modalFinalizarBs.show();
     }
-};
+}
 
-/**
- * Abre el modal de consulta para ver la solución aplicada a una incidencia resuelta.
- */
-window.abrirModalVerResolucion = function(idIncidencia) {
-    const inc = incidenciasAsignadas.find(i => i.id_incidencia === idIncidencia);
-    if (!inc) return;
-
-    document.getElementById('verModalId').textContent = inc.id_incidencia;
-    document.getElementById('verModalEquipo').textContent = `${inc.articulo_descripcion || 'Equipo'} — Solicitado por ${inc.usuario_creador || 'Empleado'}`;
-    document.getElementById('verModalFalla').textContent = inc.descripcion_pedido || 'Sin descripción';
-    document.getElementById('verModalResolucion').textContent = inc.descripcion_resolucion || 'Resolución completada por el técnico de Sistemas.';
-
-    if (modalVerResolucionBs) {
-        modalVerResolucionBs.show();
-    }
-};
-
-/**
- * Envía la petición PUT para finalizar la incidencia y disparar el correo.
- */
-async function finalizarIncidenciaSubmit(e) {
+async function enviarFinalizacionIncidencia(e) {
     e.preventDefault();
 
-    if (!incidenciaSeleccionada) return;
+    if (!idIncidenciaSeleccionadaModal) return;
 
-    const txtRes = document.getElementById('txtResolucion');
-    const resolucion = txtRes ? txtRes.value.trim() : '';
-
-    if (!resolucion) {
-        mostrarToast('Debes ingresar la descripción de la resolución técnica.', 'warning');
+    const descripcion_resolucion = document.getElementById('txtResolucion').value.trim();
+    if (!descripcion_resolucion) {
+        mostrarToast('Debes ingresar la descripción de la resolución técnica.', 'error');
         return;
     }
 
     const btnSubmit = document.getElementById('btnConfirmarFinalizar');
-    const textoOriginal = btnSubmit ? btnSubmit.innerHTML : '';
-    if (btnSubmit) {
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Finalizando y enviando correo...`;
-    }
-
     try {
-        const response = await fetchConAuth(`${API_BASE_URL}/sistemas/incidencias/${incidenciaSeleccionada.id_incidencia}/finalizar`, {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Procesando...`;
+
+        const response = await fetch(`${API_BASE_URL}/sistemas/incidencias/${idIncidenciaSeleccionadaModal}/finalizar`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ descripcion_resolucion: resolucion })
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ descripcion_resolucion })
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.mensaje || data.error || 'Error al finalizar la incidencia');
+            throw new Error(data.mensaje || 'Error al finalizar la incidencia');
         }
+
+        mostrarToast(`¡Incidencia #${idIncidenciaSeleccionadaModal} resuelta! Notificación por correo enviada.`, 'exito');
 
         if (modalFinalizarBs) {
             modalFinalizarBs.hide();
         }
 
-        mostrarToast(`✅ Incidencia #${incidenciaSeleccionada.id_incidencia} finalizada exitosamente. Notificación por correo enviada.`, 'success');
-
-        // Recargar la tabla con los nuevos datos
         await cargarIncidenciasAsignadas();
 
     } catch (error) {
         console.error('Error al finalizar incidencia:', error);
-        mostrarToast(error.message, 'danger');
+        mostrarToast(error.message, 'error');
     } finally {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = textoOriginal;
-        }
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `<i class="bi bi-send-check me-1"></i> Finalizar y Notificar`;
     }
 }
 
-/**
- * Cierra la sesión activa y redirige al login.
- */
-function cerrarSesion() {
-    localStorage.removeItem('jwt_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user_data');
-    localStorage.removeItem('usuario');
-    window.location.href = 'index.html';
+function abrirModalVerResolucion(idIncidencia) {
+    const inc = incidenciasCache.find(i => i.id_incidencia === idIncidencia);
+    if (!inc) return;
+
+    document.getElementById('verModalId').textContent = idIncidencia;
+    document.getElementById('verModalEquipo').textContent = `${inc.articulo_descripcion || 'Equipo'} — Solicitado por ${inc.usuario_creador || 'Empleado'}`;
+    document.getElementById('verModalFalla').textContent = inc.descripcion_pedido || 'Sin descripción del inconveniente';
+    document.getElementById('verModalResolucion').textContent = inc.descripcion_resolucion || 'Resolución registrada sin detalle en texto.';
+
+    if (modalVerResolucionBs) {
+        modalVerResolucionBs.show();
+    }
 }
 
-/**
- * Muestra una notificación Toast emergente en pantalla.
- */
-function mostrarToast(mensaje, tipo = 'success') {
+function mostrarToast(mensaje, tipo = 'exito') {
     const toastEl = document.getElementById('toast');
     const toastBody = document.getElementById('toastBody');
 
-    if (!toastEl || !toastBody) return;
+    if (!toastEl || !toastBody || !toastBs) return;
 
-    toastEl.className = 'toast align-items-center text-white border-0';
-    if (tipo === 'success') {
+    toastEl.classList.remove('bg-danger', 'bg-success', 'bg-concordia-light', 'bg-secondary');
+
+    if (tipo === 'exito') {
         toastEl.classList.add('bg-concordia-light');
-    } else if (tipo === 'danger' || tipo === 'error') {
+    } else if (tipo === 'error') {
         toastEl.classList.add('bg-danger');
-    } else if (tipo === 'warning') {
-        toastEl.classList.add('bg-warning', 'text-dark');
     } else {
         toastEl.classList.add('bg-secondary');
     }
 
     toastBody.textContent = mensaje;
-    if (toastBs) toastBs.show();
+    toastBs.show();
 }
 
-/**
- * Sanitiza texto para prevenir inyección HTML / XSS.
- */
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)

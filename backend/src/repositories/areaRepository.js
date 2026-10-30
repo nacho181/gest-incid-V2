@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const db = require('../config/db');
+import db from '../config/db.js';
 
 class AreaRepository {
   async findAll() {
@@ -30,4 +30,4 @@ class AreaRepository {
   }
 }
 
-module.exports = new AreaRepository();
+export default new AreaRepository();

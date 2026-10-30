@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const categoriaRepository = require('../repositories/categoriaRepository');
+import categoriaRepository from '../repositories/categoriaRepository.js';
 
 class CategoriaService {
   async getCategorias(query) {
@@ -110,4 +110,4 @@ class CategoriaService {
   }
 }
 
-module.exports = new CategoriaService();
+export default new CategoriaService();

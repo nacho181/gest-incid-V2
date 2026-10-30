@@ -1,10 +1,11 @@
 /**
  * ============================================================================
  * MUNICIPALIDAD DE CONCORDIA - PANEL DEL DIRECTOR DE SISTEMAS
- * Lógica Frontend: Consumo de endpoints REST con token JWT, Dashboard y PDF
- * NO UTILIZA IMÁGENES, ÍCONOS NI SVG BAJO NINGUNA CIRCUNSTANCIA.
  * ============================================================================
  */
+
+import * as bootstrap from 'bootstrap';
+window.bootstrap = bootstrap;
 
 // URL Base de la API REST
 const API_BASE_URL = '/api/v1';

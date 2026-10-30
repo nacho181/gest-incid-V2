@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-const areaService = require('../services/areaService');
+import areaService from '../services/areaService.js';
 
 class AreaController {
   async getAreas(req, res) {
@@ -21,4 +21,4 @@ class AreaController {
   }
 }
 
-module.exports = new AreaController();
+export default new AreaController();

@@ -4,6 +4,11 @@
  * ============================================================================
  */
 
+import * as bootstrap from 'bootstrap';
+import TomSelect from 'tom-select';
+
+window.bootstrap = bootstrap;
+
 const API_BASE_URL = '/api/v1';
 
 // Estado de sesión del cliente
@@ -13,6 +18,7 @@ let authToken = localStorage.getItem('jwt_token') || null;
 // Caché local para filtrado de artículos
 let listaArticulosCache = [];
 let bsToast = null;
+let tomSelectArticulo = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Inicializar Toast de Bootstrap
@@ -281,6 +287,30 @@ async function fetchConAuth(url, options = {}) {
 }
 
 /**
+ * Inicializa la librería Tom Select en el selector de artículos para permitir búsqueda avanzada.
+ */
+function inicializarTomSelect() {
+    const selectEl = document.getElementById('selectArticulo');
+    if (!selectEl) return;
+
+    if (tomSelectArticulo) {
+        tomSelectArticulo.destroy();
+        tomSelectArticulo = null;
+    }
+
+    tomSelectArticulo = new TomSelect('#selectArticulo', {
+        create: false,
+        placeholder: '-- Seleccionar Artículo --',
+        allowEmptyOption: true,
+        maxOptions: 500,
+        sortField: {
+            field: 'text',
+            direction: 'asc'
+        }
+    });
+}
+
+/**
  * Consulta y carga el catálogo de artículos.
  */
 async function cargarArticulos() {
@@ -293,6 +323,11 @@ async function cargarArticulos() {
 
         const selectArticulo = document.getElementById('selectArticulo');
         if (selectArticulo) {
+            if (tomSelectArticulo) {
+                tomSelectArticulo.destroy();
+                tomSelectArticulo = null;
+            }
+
             selectArticulo.innerHTML = '<option value="">-- Seleccionar Artículo --</option>';
             listaArticulosCache.forEach(art => {
                 const option = document.createElement('option');
@@ -300,6 +335,8 @@ async function cargarArticulos() {
                 option.textContent = `${art.descripcion} - [Cat: ${art.categoria_descripcion || art.categoria_nombre || 'Gral'}]`;
                 selectArticulo.appendChild(option);
             });
+
+            inicializarTomSelect();
         }
 
         renderizarGridArticulos(listaArticulosCache);
@@ -362,9 +399,13 @@ function filtrarArticulos(query) {
 }
 
 function seleccionarArticuloParaIncidencia(idArticulo) {
-    const selectArticulo = document.getElementById('selectArticulo');
-    if (selectArticulo) {
-        selectArticulo.value = idArticulo;
+    if (tomSelectArticulo) {
+        tomSelectArticulo.setValue(idArticulo);
+    } else {
+        const selectArticulo = document.getElementById('selectArticulo');
+        if (selectArticulo) {
+            selectArticulo.value = idArticulo;
+        }
     }
 
     const tabBtn = document.getElementById('btn-nueva-incidencia');
@@ -463,7 +504,11 @@ async function crearIncidencia(e) {
         return;
     }
 
-    const id_articulo = parseInt(document.getElementById('selectArticulo').value, 10);
+    const selectEl = document.getElementById('selectArticulo');
+    const id_articulo = tomSelectArticulo
+        ? parseInt(tomSelectArticulo.getValue(), 10)
+        : parseInt(selectEl.value, 10);
+
     const prioridad = parseInt(document.getElementById('selectPrioridad').value, 10);
     const descripcion_pedido = document.getElementById('txtDescripcion').value.trim();
 
@@ -490,6 +535,9 @@ async function crearIncidencia(e) {
 
         mostrarToast('¡Incidencia creada exitosamente!', 'exito');
         document.getElementById('formNuevaIncidencia').reset();
+        if (tomSelectArticulo) {
+            tomSelectArticulo.clear();
+        }
 
         await cargarMisIncidencias();
         const tabBtn = document.getElementById('btn-mis-incidencias');

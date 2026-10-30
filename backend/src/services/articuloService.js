@@ -5,10 +5,10 @@
  * ============================================================================
  */
 
-const articuloRepository = require('../repositories/articuloRepository');
-const categoriaRepository = require('../repositories/categoriaRepository');
-const areaRepository = require('../repositories/areaRepository');
-const ROLES = require('../utils/roles');
+import articuloRepository from '../repositories/articuloRepository.js';
+import categoriaRepository from '../repositories/categoriaRepository.js';
+import areaRepository from '../repositories/areaRepository.js';
+import ROLES from '../utils/roles.js';
 
 class ArticuloService {
   async getArticulos(query, usuario) {
@@ -179,4 +179,4 @@ class ArticuloService {
   }
 }
 
-module.exports = new ArticuloService();
+export default new ArticuloService();

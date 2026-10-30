@@ -4,16 +4,13 @@
  * Endpoints públicos y protegidos vinculados a la gestión de sesión.
  * ============================================================================
  */
-const express = require('express');
-const { body, validationResult } = require('express-validator');
+import express from 'express';
+import { body, validationResult } from 'express-validator';
+import authController from '../controllers/authController.js';
+import { verificarToken } from '../middlewares/authMiddleware.js';
+import { uploadAvatar } from '../middlewares/uploadMiddleware.js';
+
 const router = express.Router();
-const authController = require('../controllers/authController');
-
-// 1. IMPORTANTE: Importar el middleware verificarToken
-const { verificarToken } = require('../middlewares/authMiddleware');
-
-// 2. Importar el middleware de subida de archivos (Multer)
-const { uploadAvatar } = require('../middlewares/uploadMiddleware');
 
 // Middleware genérico para capturar errores de express-validator
 const validarCampos = (req, res, next) => {
@@ -76,4 +73,4 @@ router.get('/me', verificarToken, authController.obtenerUsuarioActual);
 // POST /api/v1/auth/avatar - Subir imagen de perfil con Multer
 router.post('/avatar', verificarToken, uploadAvatar.single('avatar'), authController.subirAvatar);
 
-module.exports = router;
+export default router;

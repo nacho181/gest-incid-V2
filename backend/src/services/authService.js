@@ -5,9 +5,9 @@
  * ============================================================================
  */
 
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
-const usuarioRepository = require('../repositories/usuarioRepository');
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import usuarioRepository from '../repositories/usuarioRepository.js';
 
 class AuthService {
   async login(usuario, contrasenia) {
@@ -68,4 +68,4 @@ class AuthService {
   }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

@@ -119,6 +119,24 @@ function setupEventListenersDirector() {
     if (btnPDF) {
         btnPDF.addEventListener('click', generarReportePDF);
     }
+
+    // Delegación de eventos para la tabla de gestión de incidencias
+    const tbodyGestion = document.getElementById('tbodyGestion');
+    if (tbodyGestion) {
+        tbodyGestion.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn || btn.disabled) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+            if (!id) return;
+
+            if (action === 'asignar') {
+                abrirModalAsignar(parseInt(id, 10));
+            } else if (action === 'cancelar') {
+                cancelarIncidenciaDirector(parseInt(id, 10));
+            }
+        });
+    }
 }
 
 /**
@@ -314,11 +332,11 @@ async function cargarGestionIncidencias() {
             // Botón para Asignar (Deshabilitado si está Cancelada)
             const btnAsignar = esCancelada
                 ? `<button class="btn btn-sm btn-outline-secondary me-1 fw-semibold" disabled title="Incidencia cancelada">Asignar</button>`
-                : `<button onclick="abrirModalAsignar(${inc.id_incidencia})" class="btn btn-sm btn-outline-concordia me-1 fw-semibold">Asignar</button>`;
+                : `<button data-action="asignar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-concordia me-1 fw-semibold">Asignar</button>`;
 
             // Botón para Cancelar (Soft delete habilitado únicamente si está Pendiente)
             const btnCancelar = esPendiente
-                ? `<button onclick="cancelarIncidenciaDirector(${inc.id_incidencia})" class="btn btn-sm btn-outline-danger fw-semibold">Cancelar</button>`
+                ? `<button data-action="cancelar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-danger fw-semibold">Cancelar</button>`
                 : `<span class="text-muted small">N/A</span>`;
 
             tr.innerHTML = `

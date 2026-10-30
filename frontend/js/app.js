@@ -67,6 +67,34 @@ function setupEventListeners() {
             filtrarArticulos(query);
         });
     }
+
+    // Delegación de eventos para tarjetas de artículos
+    const gridArticulos = document.getElementById('gridArticulos');
+    if (gridArticulos) {
+        gridArticulos.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+            if (action === 'reportar-falla' && id) {
+                seleccionarArticuloParaIncidencia(parseInt(id, 10));
+            }
+        });
+    }
+
+    // Delegación de eventos para la tabla de incidencias
+    const tbodyIncidencias = document.getElementById('tbodyIncidencias');
+    if (tbodyIncidencias) {
+        tbodyIncidencias.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+            if (action === 'cancelar' && id) {
+                cancelarIncidencia(parseInt(id, 10));
+            }
+        });
+    }
 }
 
 /**
@@ -307,7 +335,7 @@ function renderizarGridArticulos(articulos) {
                     <h5 class="card-title fw-bold text-concordia-dark mb-1">${escapeHtml(art.descripcion)}</h5>
                     <p class="card-text small text-muted mb-3">Área asignada: <strong>${escapeHtml(art.area_descripcion || art.area_nombre || 'General')}</strong></p>
                     <div class="mt-auto">
-                        <button onclick="seleccionarArticuloParaIncidencia(${art.id_articulo})" class="btn btn-sm btn-outline-concordia w-100 fw-semibold">
+                        <button data-action="reportar-falla" data-id="${art.id_articulo}" class="btn btn-sm btn-outline-concordia w-100 fw-semibold btn-reportar-falla">
                             Reportar Falla
                         </button>
                     </div>
@@ -402,7 +430,7 @@ async function cargarMisIncidencias() {
 
             const esPendiente = (inc.id_estado === 1 || estadoNom.includes('pendiente'));
             const botonAccion = esPendiente
-                ? `<button onclick="cancelarIncidencia(${inc.id_incidencia})" class="btn btn-sm btn-outline-danger fw-semibold">Cancelar</button>`
+                ? `<button data-action="cancelar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-danger fw-semibold btn-cancelar-incidencia">Cancelar</button>`
                 : `<span class="text-muted small">Sin acciones</span>`;
 
             tr.innerHTML = `

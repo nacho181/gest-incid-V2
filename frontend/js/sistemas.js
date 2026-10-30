@@ -58,6 +58,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Delegación de eventos para la tabla de incidencias asignadas
+    const tbodyIncidenciasSistemas = document.getElementById('tbodyIncidenciasSistemas');
+    if (tbodyIncidenciasSistemas) {
+        tbodyIncidenciasSistemas.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id ? parseInt(btn.dataset.id, 10) : null;
+            if (!id) return;
+
+            if (action === 'finalizar') {
+                abrirModalFinalizar(id);
+            } else if (action === 'ver-resolucion') {
+                abrirModalVerResolucion(id);
+            }
+        });
+    }
+
     // 4. Cargar incidencias iniciales
     cargarIncidenciasAsignadas();
 });
@@ -253,13 +271,13 @@ function renderizarTabla() {
         let accionesHtml = '';
         if (inc.id_estado === 1 || inc.id_estado === 2) {
             accionesHtml = `
-                <button class="btn btn-sm btn-concordia fw-semibold py-1 px-2" onclick="abrirModalFinalizar(${inc.id_incidencia})">
+                <button class="btn btn-sm btn-concordia fw-semibold py-1 px-2" data-action="finalizar" data-id="${inc.id_incidencia}">
                     <i class="bi bi-check2-square me-1"></i> Finalizar
                 </button>
             `;
         } else if (inc.id_estado === 3) {
             accionesHtml = `
-                <button class="btn btn-sm btn-outline-success fw-semibold py-1 px-2" onclick="abrirModalVerResolucion(${inc.id_incidencia})">
+                <button class="btn btn-sm btn-outline-success fw-semibold py-1 px-2" data-action="ver-resolucion" data-id="${inc.id_incidencia}">
                     <i class="bi bi-eye me-1"></i> Ver Solución
                 </button>
             `;

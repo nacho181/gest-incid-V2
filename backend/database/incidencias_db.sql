@@ -24,7 +24,8 @@ SET row_security = off;
 -- Name: public; Type: SCHEMA; Schema: -; Owner: pg_database_owner
 --
 
-CREATE SCHEMA IF NOT EXISTS public;
+CREATE SCHEMA public;
+
 
 ALTER SCHEMA public OWNER TO pg_database_owner;
 
@@ -209,7 +210,7 @@ CREATE TABLE public.incidencias (
     id_articulo integer NOT NULL,
     id_estado integer NOT NULL,
     creado_por integer NOT NULL,
-    asignado_a integer,
+    asignado_a integer NOT NULL,
     creado timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     prioridad integer DEFAULT 1 NOT NULL,
     descripcion_pedido character varying(250),
@@ -617,3 +618,4 @@ ALTER TABLE ONLY public.usuarios
 --
 -- PostgreSQL database dump complete
 --
+

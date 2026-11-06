@@ -124,8 +124,8 @@ async function runTests() {
     });
     assert.strictEqual(resCrear.status, 201);
     const idIncidenciaNueva = resCrear.body.incidencia.id_incidencia;
-    assert.strictEqual(resCrear.body.incidencia.asignado_a, null, 'Nuevas incidencias deben guardarse sin asignar (NULL)');
-    console.log(`   ✅ Incidencia #${idIncidenciaNueva} creada exitosamente con asignado_a = NULL.`);
+    assert.strictEqual(resCrear.body.incidencia.asignado_a, 0, 'Nuevas incidencias deben guardarse con el ID del usuario comodín Sin Asignar (0)');
+    console.log(`   ✅ Incidencia #${idIncidenciaNueva} creada exitosamente con asignado_a = 0.`);
 
     // Asignar manualmente la incidencia al técnico Carlos Perez (sistemasUserId) como Director
     const resLoginDirector = await request('POST', '/api/v1/auth/login', {

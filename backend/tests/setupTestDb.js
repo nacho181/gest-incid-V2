@@ -71,7 +71,7 @@ export async function setupTestDb() {
             id_articulo INTEGER NOT NULL,
             id_estado INTEGER NOT NULL,
             creado_por INTEGER NOT NULL,
-            asignado_a INTEGER,
+            asignado_a INTEGER NOT NULL,
             creado TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
             prioridad INTEGER DEFAULT 1 NOT NULL,
             descripcion_pedido VARCHAR(250),
@@ -108,6 +108,7 @@ export async function setupTestDb() {
         (1, 'Pendiente', 1), (2, 'En Proceso', 1), (3, 'Resuela', 1), (4, 'Cancelada', 1);
 
         INSERT INTO public.usuarios (id_usuario, id_area, nombres, apellidos, usuario, contrasenia, avatar, rol, activo) VALUES
+        (0, 3, 'Sin', 'Asignar', 'sin_asignar@concordia.gob.ar', 'none', '', 2, 1),
         (1, 3, 'Carlos', 'Perez', 'carper@correo.com', 'fcaddfce9c7c894c376cf085b51ee37b851e89477a2986d2a26b8cc1f484eaf8', '', 2, 1),
         (2, 3, 'Carmen', 'Gomez', 'cargom@correo.com', 'be4288567c04f9b827ff17cad92f29fc8ab6667bf235e7ebba558588e2606ee2', '', 2, 1),
         (3, 3, 'Pamela', 'Almeida', 'pamalm@correo.com', 'be39221afb177a35f41e3dc590cc630ed8e58773dbb11a29d7a332b9e1eeaad1', '', 1, 1),

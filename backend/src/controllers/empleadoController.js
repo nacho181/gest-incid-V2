@@ -36,12 +36,14 @@ class EmpleadoController {
     try {
       const { id_articulo, prioridad, descripcion_pedido } = req.body;
       const idUsuario = req.usuario.id_usuario;
+      const asignado_a_default = 0; // ID del usuario comodín "Sin Asignar"
 
       const nuevaIncidencia = await empleadoService.crearIncidencia({
         id_articulo,
         prioridad,
         descripcion_pedido,
-        idUsuario
+        idUsuario,
+        asignado_a: asignado_a_default
       });
 
       return res.status(201).json({

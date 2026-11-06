@@ -24,7 +24,7 @@ class UsuarioRepository {
       SELECT u.id_usuario, u.nombres, u.apellidos, u.usuario, u.rol, u.activo, a.descripcion AS area_descripcion
       FROM public.usuarios u
       JOIN public.areas a ON u.id_area = a.id_area
-      WHERE u.activo = 1
+      WHERE u.activo = 1 AND u.id_usuario != 0
       ORDER BY u.id_usuario ASC
     `;
     const { rows } = await db.query(queryText);
@@ -36,7 +36,7 @@ class UsuarioRepository {
       SELECT u.id_usuario, u.nombres, u.apellidos, u.usuario, u.rol, u.activo, a.descripcion AS area_descripcion
       FROM public.usuarios u
       JOIN public.areas a ON u.id_area = a.id_area
-      WHERE u.id_area = 3 AND u.activo = 1 AND u.rol = 2
+      WHERE u.id_area = 3 AND u.activo = 1 AND u.rol = 2 AND u.id_usuario != 0
       ORDER BY u.apellidos ASC
     `;
     const { rows } = await db.query(queryText);

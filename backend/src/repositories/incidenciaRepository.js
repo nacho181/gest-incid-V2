@@ -41,10 +41,15 @@ class IncidenciaRepository {
       SELECT inc.id_incidencia, inc.id_articulo, inc.id_estado, inc.creado_por, inc.asignado_a,
               inc.creado, inc.prioridad, inc.descripcion_pedido, inc.descripcion_resolucion,
               est.descripcion AS estado_descripcion,
-              art.descripcion AS articulo_descripcion
+              art.descripcion AS articulo_descripcion,
+              CASE
+                WHEN inc.asignado_a = 0 OR inc.asignado_a IS NULL THEN 'Sin Asignar'
+                ELSE COALESCE(CONCAT(u_asig.nombres, ' ', u_asig.apellidos), 'Sin Asignar')
+              END AS asignado_nombre
        FROM public.incidencias inc
        JOIN public.estados est ON inc.id_estado = est.id_estado
        JOIN public.articulos art ON inc.id_articulo = art.id_articulo
+       LEFT JOIN public.usuarios u_asig ON inc.asignado_a = u_asig.id_usuario
        WHERE inc.creado_por = $1
        ORDER BY inc.creado DESC
     `;
@@ -88,7 +93,10 @@ class IncidenciaRepository {
              est.descripcion AS estado_descripcion,
              art.descripcion AS articulo_descripcion,
              CONCAT(u_crea.nombres, ' ', u_crea.apellidos) AS usuario_creador,
-             COALESCE(CONCAT(u_asig.nombres, ' ', u_asig.apellidos), 'Sin Asignar') AS asignado_nombre
+             CASE
+               WHEN inc.asignado_a = 0 OR inc.asignado_a IS NULL THEN 'Sin Asignar'
+               ELSE COALESCE(CONCAT(u_asig.nombres, ' ', u_asig.apellidos), 'Sin Asignar')
+             END AS asignado_nombre
       FROM public.incidencias inc
       JOIN public.estados est ON inc.id_estado = est.id_estado
       JOIN public.articulos art ON inc.id_articulo = art.id_articulo
@@ -163,7 +171,10 @@ class IncidenciaRepository {
              est.descripcion AS estado_descripcion,
              art.descripcion AS articulo_descripcion,
              CONCAT(u_crea.nombres, ' ', u_crea.apellidos) AS usuario_creador,
-             COALESCE(CONCAT(u_asig.nombres, ' ', u_asig.apellidos), 'Sin Asignar') AS asignado_nombre
+             CASE
+               WHEN inc.asignado_a = 0 OR inc.asignado_a IS NULL THEN 'Sin Asignar'
+               ELSE COALESCE(CONCAT(u_asig.nombres, ' ', u_asig.apellidos), 'Sin Asignar')
+             END AS asignado_nombre
       FROM public.incidencias inc
       JOIN public.estados est ON inc.id_estado = est.id_estado
       JOIN public.articulos art ON inc.id_articulo = art.id_articulo

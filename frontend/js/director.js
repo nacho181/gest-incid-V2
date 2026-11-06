@@ -90,6 +90,27 @@ function getAuthHeaders() {
  * Configura las acciones e interactividad del panel.
  */
 function setupEventListenersDirector() {
+    // Redirección por rol en el logo "MC"
+    document.querySelectorAll('.logo-mc-interactive').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            let user = null;
+            try {
+                user = JSON.parse(localStorage.getItem('user_data') || 'null');
+            } catch (err) {
+                user = null;
+            }
+            const rol = user && user.rol ? Number(user.rol) : 1;
+            if (rol === 1) {
+                window.location.href = 'director.html';
+            } else if (rol === 2) {
+                window.location.href = 'sistemas.html';
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    });
+
     // Botón para cerrar sesión
     const btnLogout = document.getElementById('btnLogoutDirector');
     if (btnLogout) {

@@ -37,7 +37,39 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Registra los escuchadores de eventos para la interfaz.
  */
+/**
+ * Obtiene la URL de inicio correspondiente según el rol del usuario autenticado.
+ * - Rol 1: Director de Sistemas -> director.html
+ * - Rol 2: Empleado de Sistemas -> sistemas.html
+ * - Rol 3: Empleado Municipal -> index.html
+ */
+function getHomeUrlPorRol(user) {
+    if (!user) {
+        try {
+            user = JSON.parse(localStorage.getItem('user_data') || 'null');
+        } catch (e) {
+            user = null;
+        }
+    }
+    const rol = user && user.rol ? Number(user.rol) : null;
+    if (rol === 1) return 'director.html';
+    if (rol === 2) return 'sistemas.html';
+    return 'index.html';
+}
+
+function redirigirPorRol(user) {
+    window.location.href = getHomeUrlPorRol(user);
+}
+
 function setupEventListeners() {
+    // Redirección por rol en el logo "MC"
+    document.querySelectorAll('.logo-mc-interactive').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            redirigirPorRol(currentUser);
+        });
+    });
+
     // Formulario de login
     const formLogin = document.getElementById('formLogin');
     if (formLogin) {
@@ -224,6 +256,11 @@ function mostrarVistaAutenticada() {
 
     if (currentUser && currentUser.rol === 1) {
         window.location.href = 'director.html';
+        return;
+    }
+
+    if (currentUser && currentUser.rol === 2) {
+        window.location.href = 'sistemas.html';
         return;
     }
 

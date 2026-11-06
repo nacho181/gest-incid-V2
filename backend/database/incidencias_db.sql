@@ -472,6 +472,7 @@ INSERT INTO public.incidencias VALUES (4, 3, 1, 4, 2, '2026-09-13 18:52:51.34635
 -- Data for Name: usuarios; Type: TABLE DATA; Schema: public; Owner: postgre
 --
 
+INSERT INTO public.usuarios VALUES (0, 3, 'Sin', 'Asignar', 'sin_asignar@concordia.gob.ar', 'none', '', 2, 1);
 INSERT INTO public.usuarios VALUES (1, 3, 'Carlos', 'Perez', 'carper@correo.com', 'fcaddfce9c7c894c376cf085b51ee37b851e89477a2986d2a26b8cc1f484eaf8', '', 2, 1);
 INSERT INTO public.usuarios VALUES (2, 3, 'Carmen', 'Gomez', 'cargom@correo.com', 'be4288567c04f9b827ff17cad92f29fc8ab6667bf235e7ebba558588e2606ee2', '', 2, 1);
 INSERT INTO public.usuarios VALUES (3, 3, 'Pamela', 'Almeida', 'pamalm@correo.com', 'be39221afb177a35f41e3dc590cc630ed8e58773dbb11a29d7a332b9e1eeaad1', '', 1, 1);

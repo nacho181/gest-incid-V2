@@ -6,89 +6,37 @@
  */
 
 import empleadoService from '../services/empleadoService.js';
+import { wrapController } from '../utils/asyncHandler.js';
 
 class EmpleadoController {
   async getEmpleados(req, res) {
-    try {
-      const empleados = await empleadoService.getEmpleados();
-      return res.status(200).json(empleados);
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al obtener empleados'
-      });
-    }
+    res.status(200).json(await empleadoService.getEmpleados());
   }
 
   async getArticulos(req, res) {
-    try {
-      const articulos = await empleadoService.getArticulos();
-      return res.status(200).json(articulos);
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al obtener artículos'
-      });
-    }
+    res.status(200).json(await empleadoService.getArticulos());
   }
 
   async crearIncidencia(req, res) {
-    try {
-      const { id_articulo, prioridad, descripcion_pedido } = req.body;
-      const idUsuario = req.usuario.id_usuario;
-      const asignado_a_default = 0; // ID del usuario comodín "Sin Asignar"
-
-      const nuevaIncidencia = await empleadoService.crearIncidencia({
-        id_articulo,
-        prioridad,
-        descripcion_pedido,
-        idUsuario,
-        asignado_a: asignado_a_default
-      });
-
-      return res.status(201).json({
-        mensaje: 'Incidencia creada correctamente',
-        incidencia: nuevaIncidencia
-      });
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al crear la incidencia'
-      });
-    }
+    const { id_articulo, prioridad, descripcion_pedido } = req.body;
+    const incidencia = await empleadoService.crearIncidencia({
+      id_articulo,
+      prioridad,
+      descripcion_pedido,
+      idUsuario: req.usuario.id_usuario,
+      asignado_a: 0 // usuario comodín "Sin Asignar"
+    });
+    res.status(201).json({ mensaje: 'Incidencia creada correctamente', incidencia });
   }
 
   async getMisIncidencias(req, res) {
-    try {
-      const idUsuario = req.usuario.id_usuario;
-      const incidencias = await empleadoService.getMisIncidencias(idUsuario);
-      return res.status(200).json(incidencias);
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al obtener las incidencias'
-      });
-    }
+    res.status(200).json(await empleadoService.getMisIncidencias(req.usuario.id_usuario));
   }
 
   async cancelarIncidencia(req, res) {
-    try {
-      const { id } = req.params;
-      const idUsuario = req.usuario.id_usuario;
-
-      const incidenciaCancelada = await empleadoService.cancelarIncidencia(id, idUsuario);
-
-      return res.status(200).json({
-        mensaje: 'Incidencia cancelada correctamente',
-        incidencia: incidenciaCancelada
-      });
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al cancelar la incidencia'
-      });
-    }
+    const incidencia = await empleadoService.cancelarIncidencia(req.params.id, req.usuario.id_usuario);
+    res.status(200).json({ mensaje: 'Incidencia cancelada correctamente', incidencia });
   }
 }
 
-export default new EmpleadoController();
+export default wrapController(new EmpleadoController());

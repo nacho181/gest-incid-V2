@@ -84,10 +84,10 @@ async function runTests() {
       descripcion: catNombre
     }, authHeaders);
     assert.strictEqual(resAddCat.status, 201);
-    const idCatCreada = resAddCat.body.id_categoria;
+    const idCatCreada = resAddCat.body.categoria.id_categoria;
     assert.ok(idCatCreada, 'Debe retornar el ID de la categoría creada');
-    assert.strictEqual(resAddCat.body.descripcion, catNombre);
-    assert.strictEqual(resAddCat.body.activo, 1, 'La nueva categoría debe crearse con activo = 1');
+    assert.strictEqual(resAddCat.body.categoria.descripcion, catNombre);
+    assert.strictEqual(resAddCat.body.categoria.activo, 1, 'La nueva categoría debe crearse con activo = 1');
     console.log(`   ✅ Categoría creada exitosamente con ID #${idCatCreada}`);
 
     // 3. Read (Consultar por ID)
@@ -106,14 +106,14 @@ async function runTests() {
       descripcion: catNombreEditado
     }, authHeaders);
     assert.strictEqual(resEditCat.status, 200);
-    assert.strictEqual(resEditCat.body.descripcion, catNombreEditado);
+    assert.strictEqual(resEditCat.body.categoria.descripcion, catNombreEditado);
     console.log(`   ✅ Categoría #${idCatCreada} modificada correctamente.`);
 
     // 5. Delete (Soft delete / Borrado lógico)
     console.log('Test 5: [Delete] Borrado lógico (Soft delete) de categoría...');
     const resDelCat = await request('DELETE', `/api/v1/categorias/${idCatCreada}`, null, authHeaders);
     assert.strictEqual(resDelCat.status, 200);
-    assert.strictEqual(resDelCat.body.activo, 0, 'El campo activo debe actualizarse a 0 (soft delete)');
+    assert.strictEqual(resDelCat.body.categoria.activo, 0, 'El campo activo debe actualizarse a 0 (soft delete)');
     console.log(`   ✅ Borrado lógico ejecutado para categoría #${idCatCreada}.`);
 
     // 6. Verificar que NO hubo borrado físico
@@ -135,7 +135,7 @@ async function runTests() {
     console.log('Test 7: [Reactivar] Reactivación de categoría dada de baja...');
     const resReactCat = await request('PUT', `/api/v1/categorias/${idCatCreada}/reactivar`, null, authHeaders);
     assert.strictEqual(resReactCat.status, 200);
-    assert.strictEqual(resReactCat.body.activo, 1);
+    assert.strictEqual(resReactCat.body.categoria.activo, 1);
     console.log(`   ✅ Categoría #${idCatCreada} reactivada exitosamente.`);
 
     // 8. Validaciones de Categoría
@@ -169,14 +169,14 @@ async function runTests() {
       id_area: 1 // Legales
     }, authHeaders);
     assert.strictEqual(resAddArt.status, 201);
-    const idArtCreado = resAddArt.body.id_articulo;
+    const idArtCreado = resAddArt.body.articulo.id_articulo;
     assert.ok(idArtCreado, 'Debe retornar el ID del artículo creado');
-    assert.strictEqual(resAddArt.body.descripcion, artNombre);
-    assert.strictEqual(resAddArt.body.id_categoria, idCatCreada);
-    assert.strictEqual(resAddArt.body.id_area, 1);
-    assert.strictEqual(resAddArt.body.activo, 1, 'El nuevo artículo debe crearse con activo = 1');
-    assert.ok(resAddArt.body.categoria_descripcion, 'Debe incluir la descripción de la categoría');
-    assert.ok(resAddArt.body.area_descripcion, 'Debe incluir la descripción del área');
+    assert.strictEqual(resAddArt.body.articulo.descripcion, artNombre);
+    assert.strictEqual(resAddArt.body.articulo.id_categoria, idCatCreada);
+    assert.strictEqual(resAddArt.body.articulo.id_area, 1);
+    assert.strictEqual(resAddArt.body.articulo.activo, 1, 'El nuevo artículo debe crearse con activo = 1');
+    assert.ok(resAddArt.body.articulo.categoria_descripcion, 'Debe incluir la descripción de la categoría');
+    assert.ok(resAddArt.body.articulo.area_descripcion, 'Debe incluir la descripción del área');
     console.log(`   ✅ Artículo creado exitosamente con ID #${idArtCreado}`);
 
     // 11. Read (Consultar por ID)
@@ -198,15 +198,15 @@ async function runTests() {
       id_area: 3 // Sistemas
     }, authHeaders);
     assert.strictEqual(resEditArt.status, 200);
-    assert.strictEqual(resEditArt.body.descripcion, artNombreEditado);
-    assert.strictEqual(resEditArt.body.id_area, 3);
+    assert.strictEqual(resEditArt.body.articulo.descripcion, artNombreEditado);
+    assert.strictEqual(resEditArt.body.articulo.id_area, 3);
     console.log(`   ✅ Artículo #${idArtCreado} actualizado correctamente.`);
 
     // 13. Delete (Soft delete / Borrado lógico)
     console.log('Test 13: [Delete] Borrado lógico (Soft delete) de artículo...');
     const resDelArt = await request('DELETE', `/api/v1/articulos/${idArtCreado}`, null, authHeaders);
     assert.strictEqual(resDelArt.status, 200);
-    assert.strictEqual(resDelArt.body.activo, 0, 'El campo activo debe actualizarse a 0 (soft delete)');
+    assert.strictEqual(resDelArt.body.articulo.activo, 0, 'El campo activo debe actualizarse a 0 (soft delete)');
     console.log(`   ✅ Borrado lógico ejecutado para artículo #${idArtCreado}.`);
 
     // 14. Verificar que NO hubo borrado físico del artículo
@@ -228,7 +228,7 @@ async function runTests() {
     console.log('Test 15: [Reactivar] Reactivación de artículo...');
     const resReactArt = await request('PUT', `/api/v1/articulos/${idArtCreado}/reactivar`, null, authHeaders);
     assert.strictEqual(resReactArt.status, 200);
-    assert.strictEqual(resReactArt.body.activo, 1);
+    assert.strictEqual(resReactArt.body.articulo.activo, 1);
     console.log(`   ✅ Artículo #${idArtCreado} reactivado exitosamente.`);
 
     // 16. Validaciones de Artículo

@@ -10,6 +10,7 @@ import express from 'express';
 import sistemasController from '../controllers/sistemasController.js';
 import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
 import ROLES from '../utils/roles.js';
+import { validarFinalizar } from '../validators/incidenciaValidators.js';
 
 const router = express.Router();
 
@@ -58,6 +59,6 @@ const verificarSistemas = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.DI
 router.get('/incidencias', verificarSistemas, sistemasController.getIncidenciasAsignadas);
 
 // Finalizar una incidencia asignada cargando la solución técnica y notificando por correo
-router.put('/incidencias/:id/finalizar', verificarSistemas, sistemasController.finalizarIncidencia);
+router.put('/incidencias/:id/finalizar', verificarSistemas, validarFinalizar, sistemasController.finalizarIncidencia);
 
 export default router;

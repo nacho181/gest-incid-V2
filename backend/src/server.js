@@ -22,6 +22,7 @@ import sistemasRoutes from './routes/sistemasRoutes.js';
 import categoriaRoutes from './routes/categoriaRoutes.js';
 import articuloRoutes from './routes/articuloRoutes.js';
 import areaRoutes from './routes/areaRoutes.js';
+import { errorHandler, notFoundApi } from './middlewares/errorHandler.js';
 
 dotenv.config();
 
@@ -77,9 +78,7 @@ app.get('/api/v1/health', (req, res) => {
 swaggerDocs(app);
 
 // 404 en JSON para rutas /api inexistentes
-app.use('/api', (req, res) => {
-  res.status(404).json({ error: true, mensaje: 'Ruta no encontrada' });
-});
+app.use('/api', notFoundApi);
 
 // Fallback del frontend (excluye /api)
 app.get(/^\/(?!api).*/, (req, res) => {
@@ -88,16 +87,8 @@ app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(fs.existsSync(distIndex) ? distIndex : srcIndex);
 });
 
-// ============================================================================
-// MANEJADOR GLOBAL DE ERRORES (Middleware de 4 parámetros)
-// ============================================================================
-app.use((err, req, res, next) => {
-  console.error('[ERROR NO CONTROLADO]:', err.stack || err.message);
-  res.status(err.status || 500).json({
-    error: true,
-    mensaje: err.message || 'Error interno del servidor'
-  });
-});
+// Manejador global de errores
+app.use(errorHandler);
 
 // ============================================================================
 // INICIALIZACIÓN DEL SERVIDOR

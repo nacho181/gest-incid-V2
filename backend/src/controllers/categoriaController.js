@@ -6,98 +6,36 @@
  */
 
 import categoriaService from '../services/categoriaService.js';
+import { wrapController } from '../utils/asyncHandler.js';
 
 class CategoriaController {
   async getCategorias(req, res) {
-    try {
-      const categorias = await categoriaService.getCategorias(req.query);
-      return res.status(200).json(categorias);
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al consultar categorías'
-      });
-    }
+    res.status(200).json(await categoriaService.getCategorias(req.query));
   }
 
   async getCategoriaById(req, res) {
-    try {
-      const categoria = await categoriaService.getCategoriaById(req.params.id);
-      return res.status(200).json({
-        ...categoria,
-        categoria
-      });
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al obtener la categoría'
-      });
-    }
+    res.status(200).json(await categoriaService.getCategoriaById(req.params.id));
   }
 
   async crearCategoria(req, res) {
-    try {
-      const nuevaCategoria = await categoriaService.crearCategoria(req.body);
-      return res.status(201).json({
-        mensaje: 'Categoría creada exitosamente',
-        categoria: nuevaCategoria,
-        ...nuevaCategoria
-      });
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al crear la categoría'
-      });
-    }
+    const categoria = await categoriaService.crearCategoria(req.body);
+    res.status(201).json({ mensaje: 'Categoría creada exitosamente', categoria });
   }
 
   async actualizarCategoria(req, res) {
-    try {
-      const categoriaActualizada = await categoriaService.actualizarCategoria(req.params.id, req.body);
-      return res.status(200).json({
-        mensaje: 'Categoría actualizada exitosamente',
-        categoria: categoriaActualizada,
-        ...categoriaActualizada
-      });
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al actualizar la categoría'
-      });
-    }
+    const categoria = await categoriaService.actualizarCategoria(req.params.id, req.body);
+    res.status(200).json({ mensaje: 'Categoría actualizada exitosamente', categoria });
   }
 
   async eliminarCategoria(req, res) {
-    try {
-      const categoriaEliminada = await categoriaService.eliminarCategoria(req.params.id);
-      return res.status(200).json({
-        mensaje: 'Categoría dada de baja correctamente (borrado lógico)',
-        categoria: categoriaEliminada,
-        ...categoriaEliminada
-      });
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al eliminar la categoría'
-      });
-    }
+    const categoria = await categoriaService.eliminarCategoria(req.params.id);
+    res.status(200).json({ mensaje: 'Categoría dada de baja correctamente (borrado lógico)', categoria });
   }
 
   async reactivarCategoria(req, res) {
-    try {
-      const categoriaReactivada = await categoriaService.reactivarCategoria(req.params.id);
-      return res.status(200).json({
-        mensaje: 'Categoría reactivada exitosamente',
-        categoria: categoriaReactivada,
-        ...categoriaReactivada
-      });
-    } catch (error) {
-      return res.status(error.statusCode || 500).json({
-        error: true,
-        mensaje: error.message || 'Error al reactivar la categoría'
-      });
-    }
+    const categoria = await categoriaService.reactivarCategoria(req.params.id);
+    res.status(200).json({ mensaje: 'Categoría reactivada exitosamente', categoria });
   }
 }
 
-export default new CategoriaController();
+export default wrapController(new CategoriaController());

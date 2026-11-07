@@ -9,6 +9,8 @@ import express from 'express';
 import directorController from '../controllers/directorController.js';
 import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
 import ROLES from '../utils/roles.js';
+import { validarAsignar, validarId } from '../validators/incidenciaValidators.js';
+
 
 const router = express.Router();
 
@@ -109,10 +111,10 @@ router.get('/empleados-sistemas', verificarDirector, directorController.getEmple
 router.get('/incidencias', verificarDirector, directorController.getTodasIncidencias);
 
 // Asignar una incidencia a un empleado de Sistemas
-router.put('/incidencias/:id/asignar', verificarDirector, directorController.asignarIncidencia);
+router.put('/incidencias/:id/asignar', verificarDirector, validarAsignar, directorController.asignarIncidencia);
 
 // Cancelar una incidencia en estado Pendiente (Soft Delete)
-router.put('/incidencias/:id/cancelar', verificarDirector, directorController.cancelarIncidenciaDirector);
+router.put('/incidencias/:id/cancelar', verificarDirector, validarId, directorController.cancelarIncidenciaDirector);
 
 // Obtener datos para reportes estadísticos en PDF
 router.get('/reportes', verificarDirector, directorController.getReportesEstadisticos);

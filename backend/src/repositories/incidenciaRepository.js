@@ -107,18 +107,38 @@ class IncidenciaRepository {
     const { rows } = await db.query(queryText);
     return rows;
   }
-
-  async updateAsignado(idIncidencia, idUsuarioSistemas) {
-    const updateQuery = `
-      UPDATE public.incidencias
-      SET asignado_a = $1
-      WHERE id_incidencia = $2
-      RETURNING *
-    `;
-    const { rows } = await db.query(updateQuery, [idUsuarioSistemas, idIncidencia]);
+  async findByIdForUpdate(idIncidencia, executor = db) {
+    const { rows } = await executor.query(
+      'SELECT * FROM public.incidencias WHERE id_incidencia = $1 FOR UPDATE',
+      [idIncidencia]
+    );
     return rows[0] || null;
   }
 
+  // Asigna técnico y fija el estado en una sola sentencia
+  async updateAsignacion(idIncidencia, idUsuarioSistemas, idEstado, executor = db) {
+    const { rows } = await executor.query(
+      `UPDATE public.incidencias
+          SET asignado_a = $1, id_estado = $2
+        WHERE id_incidencia = $3
+        RETURNING *`,
+      [idUsuarioSistemas, idEstado, idIncidencia]
+    );
+    return rows[0] || null;
+  }
+
+  // Solo finaliza si sigue Pendiente o En Proceso (guarda contra carreras)
+  async finalizar(idIncidencia, descripcionResolucion, executor = db) {
+    const { rows } = await executor.query(
+      `UPDATE public.incidencias
+          SET id_estado = 3, descripcion_resolucion = $1
+        WHERE id_incidencia = $2 AND id_estado IN (1, 2)
+        RETURNING *`,
+      [descripcionResolucion, idIncidencia]
+    );
+    return rows[0] || null;
+  }
+  
   async updateEstadoAndResolucion(idIncidencia, idEstado, descripcionResolucion) {
     const updateQuery = `
       UPDATE public.incidencias

@@ -22,58 +22,81 @@ class SistemasService {
     }
 
     const resolucionLimpia = descripcion_resolucion.trim();
-    const id_estado_resuelta = 3;
-
-    const incidencia = await incidenciaRepository.findByIdWithDetails(idIncidencia);
-
-    if (!incidencia) {
-      const error = new Error(`La incidencia #${idIncidencia} no existe en el sistema.`);
-      error.statusCode = 404;
-      throw error;
-    }
-
-    if (incidencia.asignado_a !== usuarioAutenticado.id_usuario && usuarioAutenticado.rol !== ROLES.DIRECTOR) {
-      const error = new Error('No tienes autorización para finalizar esta incidencia ya que no está asignada a tu cargo.');
-      error.statusCode = 403;
-      throw error;
-    }
-
-    if (incidencia.id_estado === 3) {
-      const error = new Error('Esta incidencia ya se encuentra finalizada.');
+    if (resolucionLimpia.length > 250) {
+      const error = new Error('La resolución no puede superar los 250 caracteres.');
       error.statusCode = 400;
       throw error;
     }
 
-    if (incidencia.id_estado === 4) {
-      const error = new Error('No es posible finalizar una incidencia que ha sido cancelada.');
+    const idInc = parseInt(idIncidencia, 10);
+    if (isNaN(idInc)) {
+      const error = new Error('El ID de la incidencia debe ser un número entero');
       error.statusCode = 400;
       throw error;
     }
 
-    const incidenciaActualizada = await incidenciaRepository.updateEstadoAndResolucion(
-      idIncidencia,
-      id_estado_resuelta,
-      resolucionLimpia
-    );
+    let client;
+    let incidenciaActualizada;
+    try {
+      client = await incidenciaRepository.getClient();
+      await client.query('BEGIN');
 
-    await incidenciaRepository.addHistorialEstado(idIncidencia, id_estado_resuelta);
+      const incidencia = await incidenciaRepository.findByIdForUpdate(idInc, client);
+      if (!incidencia) {
+        const error = new Error(`La incidencia #${idInc} no existe en el sistema.`);
+        error.statusCode = 404;
+        throw error;
+      }
 
+      if (incidencia.asignado_a !== usuarioAutenticado.id_usuario && usuarioAutenticado.rol !== ROLES.DIRECTOR) {
+        const error = new Error('No tienes autorización para finalizar esta incidencia ya que no está asignada a tu cargo.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      if (incidencia.id_estado === 3) {
+        const error = new Error('Esta incidencia ya se encuentra finalizada.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (incidencia.id_estado === 4) {
+        const error = new Error('No es posible finalizar una incidencia que ha sido cancelada.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      incidenciaActualizada = await incidenciaRepository.finalizar(idInc, resolucionLimpia, client);
+      if (!incidenciaActualizada) {
+        const error = new Error('La incidencia cambió de estado y ya no puede finalizarse.');
+        error.statusCode = 409;
+        throw error;
+      }
+
+      await incidenciaRepository.addHistorialEstado(idInc, 3, client);
+      await client.query('COMMIT');
+    } catch (error) {
+      if (client) await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      if (client) client.release();
+    }
+
+    // Datos para el correo (fuera de la transacción)
+    const detalle = await incidenciaRepository.findByIdWithDetails(idInc);
     const nombreTecnico = `${usuarioAutenticado.nombres} ${usuarioAutenticado.apellidos}`;
 
     const notificacionEmail = await emailService.notificarIncidenciaFinalizada({
       incidencia: incidenciaActualizada,
       descripcionResolucion: resolucionLimpia,
       tecnicoNombre: nombreTecnico,
-      destinatarioEmail: incidencia.creador_email,
-      destinatarioNombre: `${incidencia.creador_nombres} ${incidencia.creador_apellidos}`,
-      articuloDescripcion: incidencia.articulo_descripcion
+      destinatarioEmail: detalle.creador_email,
+      destinatarioNombre: `${detalle.creador_nombres} ${detalle.creador_apellidos}`,
+      articuloDescripcion: detalle.articulo_descripcion
     });
 
     return {
-      incidencia: {
-        ...incidenciaActualizada,
-        estado_descripcion: 'Resuelta'
-      },
+      incidencia: { ...incidenciaActualizada, estado_descripcion: 'Resuelta' },
       notificacion_email: notificacionEmail
     };
   }

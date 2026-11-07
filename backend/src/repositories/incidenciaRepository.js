@@ -20,6 +20,25 @@ class IncidenciaRepository {
     return rows[0] || null;
   }
 
+  // Ejecuta fn(client) en una transacción
+  async transaction(fn) {
+    return await db.transaction(fn);
+  }
+
+  async create(
+    { id_articulo, id_estado, creado_por, asignado_a, prioridad, descripcion_pedido },
+    executor = db
+  ) {
+    const { rows } = await executor.query(
+      `INSERT INTO public.incidencias
+         (id_articulo, id_estado, creado_por, asignado_a, prioridad, descripcion_pedido, descripcion_resolucion)
+       VALUES ($1, $2, $3, $4, $5, $6, '')
+       RETURNING *`,
+      [id_articulo, id_estado, creado_por, asignado_a, prioridad, descripcion_pedido]
+    );
+    return rows[0];
+  }
+
   async findByIdWithDetails(idIncidencia) {
     const queryText = `
       SELECT inc.*,

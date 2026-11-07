@@ -32,14 +32,27 @@ pool.on('error', (err) => {
 });
 
 export const db = {
-  /**
-   * Ejecuta una consulta SQL en la base de datos utilizando el pool.
-   * @param {string} text - Consulta SQL parametrizada.
-   * @param {Array} params - Parámetros de la consulta SQL.
-   * @returns {Promise<Object>} Resultado de la ejecución del query.
-   */
   query: (text, params) => pool.query(text, params),
   pool,
+
+  /**
+   * Ejecuta fn(client) dentro de una transacción.
+   * Hace COMMIT si termina bien, ROLLBACK si lanza un error, y siempre libera el cliente.
+   */
+  async transaction(fn) {
+    const client = await db.pool.connect(); // db.pool para respetar el pool de los tests
+    try {
+      await client.query('BEGIN');
+      const resultado = await fn(client);
+      await client.query('COMMIT');
+      return resultado;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 };
 
 export default db;

@@ -45,6 +45,14 @@ class ArticuloRepository {
     const { rows } = await db.query(queryText, params);
     return rows;
   }
+  
+  async existeActivo(idArticulo, executor = db) {
+    const { rows } = await executor.query(
+      'SELECT 1 FROM public.articulos WHERE id_articulo = $1 AND activo = 1',
+      [idArticulo]
+    );
+    return rows.length > 0;
+  }
 
   async findById(idArt) {
     const queryText = `

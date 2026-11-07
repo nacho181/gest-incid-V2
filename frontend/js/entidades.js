@@ -401,7 +401,11 @@ async function guardarCategoria(e) {
  */
 async function reactivarCategoria(id) {
     try {
-        const res = await authFetch(`${API_BASE_URL}/categorias/${id}/reactivar`, { method: 'PUT' });
+        const res = await authFetch(`${API_BASE_URL}/categorias/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: 1 })
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.mensaje || 'Error al reactivar categoría');
 
@@ -632,7 +636,11 @@ async function guardarArticulo(e) {
  */
 async function reactivarArticulo(id) {
     try {
-        const res = await authFetch(`${API_BASE_URL}/articulos/${id}/reactivar`, { method: 'PUT' });
+        const res = await authFetch(`${API_BASE_URL}/categorias/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activo: 1 })
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.mensaje || 'Error al reactivar artículo');
 

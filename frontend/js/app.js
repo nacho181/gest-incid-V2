@@ -35,9 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Registra los escuchadores de eventos para la interfaz.
- */
-/**
  * Obtiene la URL de inicio correspondiente según el rol del usuario autenticado.
  * - Rol 1: Director de Sistemas -> director.html
  * - Rol 2: Empleado de Sistemas -> sistemas.html
@@ -61,6 +58,9 @@ function redirigirPorRol(user) {
     window.location.href = getHomeUrlPorRol(user);
 }
 
+/**
+ * Registra los escuchadores de eventos para la interfaz.
+ */
 function setupEventListeners() {
     // Redirección por rol en el logo "MC"
     document.querySelectorAll('.logo-mc-interactive').forEach(el => {
@@ -176,7 +176,7 @@ async function manejarLogin(e) {
 
         mostrarToast(`Bienvenido/a, ${currentUser.nombres}!`, 'exito');
         document.getElementById('formLogin').reset();
-        
+
         if (currentUser.rol === 1) {
             window.location.href = 'director.html';
             return;
@@ -456,6 +456,7 @@ function seleccionarArticuloParaIncidencia(idArticulo) {
 
 /**
  * Consulta y carga las incidencias creadas por el usuario autenticado.
+ * GET /incidencias devuelve, según el rol del token, las incidencias propias.
  */
 async function cargarMisIncidencias() {
     const tbody = document.getElementById('tbodyIncidencias');
@@ -464,7 +465,7 @@ async function cargarMisIncidencias() {
     tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Cargando incidencias...</td></tr>`;
 
     try {
-        const response = await fetchConAuth(`${API_BASE_URL}/incidencias/mis-incidencias`);
+        const response = await fetchConAuth(`${API_BASE_URL}/incidencias`);
         if (!response.ok) throw new Error('Error al obtener incidencias');
 
         const result = await response.json();
@@ -591,6 +592,7 @@ async function crearIncidencia(e) {
 
 /**
  * Cancela una incidencia en estado Pendiente.
+ * PATCH /incidencias/:id con { id_estado: 4 } (cancelada).
  */
 async function cancelarIncidencia(idIncidencia) {
     if (!confirm(`¿Estás seguro de que deseas cancelar la incidencia #${idIncidencia}?`)) {
@@ -598,9 +600,10 @@ async function cancelarIncidencia(idIncidencia) {
     }
 
     try {
-        const response = await fetchConAuth(`${API_BASE_URL}/incidencias/${idIncidencia}/cancelar`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' }
+        const response = await fetchConAuth(`${API_BASE_URL}/incidencias/${idIncidencia}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_estado: 4 })
         });
 
         const data = await response.json();

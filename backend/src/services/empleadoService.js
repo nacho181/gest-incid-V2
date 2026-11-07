@@ -9,7 +9,6 @@ import usuarioRepository from '../repositories/usuarioRepository.js';
 import articuloRepository from '../repositories/articuloRepository.js';
 import incidenciaRepository from '../repositories/incidenciaRepository.js';
 import emailService from '../utils/emailService.js';
-import db from '../config/db.js';
 
 class EmpleadoService {
   async getEmpleados() {
@@ -27,45 +26,27 @@ class EmpleadoService {
       throw error;
     }
 
-    const id_estado_inicial = 1; // Pendiente
-    const idAsignado = (asignado_a !== undefined && asignado_a !== null) ? asignado_a : 0;
-    let client;
+    const ID_PENDIENTE = 1;
 
-    try {
-      client = await db.pool.connect();
-      await client.query('BEGIN');
-
-      const art = await client.query(
-        'SELECT 1 FROM public.articulos WHERE id_articulo = $1 AND activo = 1',
-        [id_articulo]
-      );
-      if (art.rows.length === 0) {
+    return await incidenciaRepository.transaction(async (client) => {
+      if (!(await articuloRepository.existeActivo(id_articulo, client))) {
         const error = new Error('El artículo no existe o está inactivo');
         error.statusCode = 400;
         throw error;
       }
 
-      const insert = await client.query(
-        `INSERT INTO public.incidencias (id_articulo, id_estado, creado_por, asignado_a, prioridad, descripcion_pedido, descripcion_resolucion)
-         VALUES ($1, $2, $3, $4, $5, $6, '') RETURNING *`,
-        [id_articulo, id_estado_inicial, idUsuario, idAsignado, prioridad || 1, descripcion_pedido]
-      );
-      const nueva = insert.rows[0];
+      const nueva = await incidenciaRepository.create({
+        id_articulo,
+        id_estado: ID_PENDIENTE,
+        creado_por: idUsuario,
+        asignado_a: asignado_a ?? 0,
+        prioridad: prioridad || 1,
+        descripcion_pedido
+      }, client);
 
-      await client.query(
-        'INSERT INTO public.incidencias_estados (id_incidencia, id_estado) VALUES ($1, $2)',
-        [nueva.id_incidencia, id_estado_inicial]
-      );
-
-      await client.query('COMMIT');
+      await incidenciaRepository.addHistorialEstado(nueva.id_incidencia, ID_PENDIENTE, client);
       return nueva;
-
-    } catch (error) {
-      if (client) await client.query('ROLLBACK').catch(() => {});
-      throw error;
-    } finally {
-      if (client) client.release();
-    }
+    });
   }
 
   async getMisIncidencias(idUsuario) {
@@ -73,25 +54,16 @@ class EmpleadoService {
   }
 
   async cancelarIncidencia(idIncidencia, idUsuario) {
-    const id_estado_cancelado = 4;
-    let client;
+    const ID_CANCELADA = 4;
 
-    try {
-      client = await db.pool.connect();
-      await client.query('BEGIN');
+    const cancelada = await incidenciaRepository.transaction(async (client) => {
+      const incidencia = await incidenciaRepository.findByIdForUpdate(idIncidencia, client);
 
-      const checkResult = await client.query(
-        'SELECT * FROM public.incidencias WHERE id_incidencia = $1 FOR UPDATE',
-        [idIncidencia]
-      );
-
-      if (checkResult.rows.length === 0) {
+      if (!incidencia) {
         const error = new Error('Incidencia no encontrada');
         error.statusCode = 404;
         throw error;
       }
-
-      const incidencia = checkResult.rows[0];
 
       if (incidencia.creado_por !== idUsuario) {
         const error = new Error('No tiene permiso para cancelar esta incidencia');
@@ -105,49 +77,29 @@ class EmpleadoService {
         throw error;
       }
 
-      const updateResult = await client.query(
-        'UPDATE public.incidencias SET id_estado = $1 WHERE id_incidencia = $2 RETURNING *',
-        [id_estado_cancelado, idIncidencia]
-      );
-      await client.query(
-        'INSERT INTO public.incidencias_estados (id_incidencia, id_estado) VALUES ($1, $2)',
-        [idIncidencia, id_estado_cancelado]
-      );
+      const actualizada = await incidenciaRepository.updateEstado(idIncidencia, ID_CANCELADA, client);
+      await incidenciaRepository.addHistorialEstado(idIncidencia, ID_CANCELADA, client);
+      return actualizada;
+    });
 
-      await client.query('COMMIT');
-
-      // Enviar notificación de email fuera de la transacción
-      try {
-        const uRes = await db.query(
-          `SELECT u.nombres, u.apellidos, u.usuario AS email, art.descripcion AS articulo_desc
-           FROM public.usuarios u
-           JOIN public.incidencias inc ON inc.creado_por = u.id_usuario
-           JOIN public.articulos art ON inc.id_articulo = art.id_articulo
-           WHERE inc.id_incidencia = $1`,
-          [idIncidencia]
-        );
-        if (uRes.rows.length > 0) {
-          const u = uRes.rows[0];
-          await emailService.notificarIncidenciaCancelada({
-            incidencia: updateResult.rows[0],
-            destinatarioEmail: u.email,
-            destinatarioNombre: `${u.nombres} ${u.apellidos}`,
-            canceladoPorNombre: `${u.nombres} ${u.apellidos} (Solicitante)`,
-            articuloDescripcion: u.articulo_desc
-          });
-        }
-      } catch (mailErr) {
-        console.error('[EMAIL ERROR]:', mailErr.message);
+    // Notificación fuera de la transacción: si el mail falla, la cancelación igual queda hecha
+    try {
+      const detalle = await incidenciaRepository.findByIdWithDetails(cancelada.id_incidencia);
+      if (detalle) {
+        const nombre = `${detalle.creador_nombres} ${detalle.creador_apellidos}`;
+        await emailService.notificarIncidenciaCancelada({
+          incidencia: cancelada,
+          destinatarioEmail: detalle.creador_email,
+          destinatarioNombre: nombre,
+          canceladoPorNombre: `${nombre} (Solicitante)`,
+          articuloDescripcion: detalle.articulo_descripcion
+        });
       }
-
-      return updateResult.rows[0];
-
-    } catch (error) {
-      if (client) await client.query('ROLLBACK').catch(() => {});
-      throw error;
-    } finally {
-      if (client) client.release();
+    } catch (mailErr) {
+      console.error('[EMAIL ERROR]:', mailErr.message);
     }
+
+    return cancelada;
   }
 }
 

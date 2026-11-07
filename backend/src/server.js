@@ -15,10 +15,10 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 
 import swaggerDocs from './utils/swagger.js';
-import empleadoRoutes from './routes/empleadoRoutes.js';
 import authRoutes from './routes/authRoutes.js';
-import directorRoutes from './routes/directorRoutes.js';
-import sistemasRoutes from './routes/sistemasRoutes.js';
+import incidenciaRoutes from './routes/incidenciaRoutes.js';
+import usuarioRoutes from './routes/usuarioRoutes.js';
+import estadisticasRoutes from './routes/estadisticasRoutes.js';
 import categoriaRoutes from './routes/categoriaRoutes.js';
 import articuloRoutes from './routes/articuloRoutes.js';
 import areaRoutes from './routes/areaRoutes.js';
@@ -54,16 +54,20 @@ app.use(express.static(path.join(__dirname, '../../frontend')));
 // RUTAS DE LA API REST Y COMPROBACIÓN DE SALUD
 // ============================================================================
 
+// Autenticación
+app.use('/api/v1/auth', authRoutes);
+
+// Recursos principales
+app.use('/api/v1/incidencias', incidenciaRoutes);
+app.use('/api/v1/usuarios', usuarioRoutes);
+
 // Entidades Base: BREAD de Categorías y Artículos, y consulta de Áreas
 app.use('/api/v1/categorias', categoriaRoutes);
 app.use('/api/v1/articulos', articuloRoutes);
 app.use('/api/v1/areas', areaRoutes);
 
-// Prefijo de versión de API REST (/api/v1)
-app.use('/api/v1', empleadoRoutes);
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/director', directorRoutes);
-app.use('/api/v1/sistemas', sistemasRoutes);
+// Estadísticas del Director: /dashboard y /reportes
+app.use('/api/v1', estadisticasRoutes);
 
 // Ruta de Comprobación de Salud del Servidor (Healthcheck)
 app.get('/api/v1/health', (req, res) => {
@@ -74,7 +78,7 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
-// Documentación Swagger 
+// Documentación Swagger
 swaggerDocs(app);
 
 // 404 en JSON para rutas /api inexistentes
@@ -87,7 +91,7 @@ app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(fs.existsSync(distIndex) ? distIndex : srcIndex);
 });
 
-// Manejador global de errores
+// Manejador global de errores (siempre al final)
 app.use(errorHandler);
 
 // ============================================================================

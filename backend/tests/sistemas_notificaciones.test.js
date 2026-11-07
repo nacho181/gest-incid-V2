@@ -139,6 +139,17 @@ async function runTests() {
       'Authorization': `Bearer ${tokenDirector}`
     });
     assert.strictEqual(resAsignar.status, 200);
+    
+    
+    assert.strictEqual(resAsignar.body.incidencia.id_estado, 2, 'Asignar debe pasar la incidencia a En Proceso');
+
+    // Asignar a un usuario que no es técnico (Esteban, rol 3) debe fallar
+    const resAsignarMal = await request('PUT', `/api/v1/director/incidencias/${idIncidenciaNueva}/asignar`, {
+      id_usuario_sistemas: 4
+    }, {
+      'Authorization': `Bearer ${tokenDirector}`
+    });
+    assert.strictEqual(resAsignarMal.status, 400);
     console.log(`   ✅ Incidencia #${idIncidenciaNueva} asignada manualmente al técnico Carlos Perez.`);
 
     // --------------------------------------------------------------------------

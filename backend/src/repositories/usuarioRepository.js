@@ -19,6 +19,16 @@ class UsuarioRepository {
     return rows[0] || null;
   }
 
+  async findTecnicoActivo(idUsuario, executor = db) {
+    const { rows } = await executor.query(
+      `SELECT id_usuario, nombres, apellidos, usuario
+         FROM public.usuarios
+        WHERE id_usuario = $1 AND rol = 2 AND activo = 1 AND id_usuario != 0`,
+      [idUsuario]
+    );
+    return rows[0] || null;
+  }
+
   async findEmpleados() {
     const queryText = `
       SELECT u.id_usuario, u.nombres, u.apellidos, u.usuario, u.rol, u.activo, a.descripcion AS area_descripcion

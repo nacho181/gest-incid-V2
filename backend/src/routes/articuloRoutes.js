@@ -5,10 +5,19 @@
  * ============================================================================
  */
 
+/**
+ * ============================================================================
+ * RUTAS DE LA API - MÓDULO ARTÍCULOS (ENTIDADES BASE)
+ * Endpoints REST para BREAD de Artículos
+ * ============================================================================
+ */
+
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import articuloController from '../controllers/articuloController.js';
 import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
+import { validarCampos } from '../middlewares/validar.js';
+import { validarId } from '../validators/incidenciaValidators.js';
 import ROLES from '../utils/roles.js';
 
 const router = express.Router();
@@ -16,15 +25,6 @@ const router = express.Router();
 // Middleware estricto para validar token JWT y verificar roles del Área de Sistemas
 const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS)];
 const verificarLectura = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.MUNICIPAL)];
-
-// Middleware genérico para capturar errores de express-validator
-const validarCampos = (req, res, next) => {
-  const errores = validationResult(req);
-  if (!errores.isEmpty()) {
-    return res.status(400).json({ errores: errores.array() });
-  }
-  next();
-};
 
 /**
  * @openapi
@@ -123,9 +123,9 @@ const validarCampos = (req, res, next) => {
 router.get('/', verificarLectura, articuloController.getArticulos);
 
 // READ: Obtener detalle de un artículo por ID
-router.get('/:id', verificarLectura, articuloController.getArticuloById);
+router.get('/:id', verificarLectura, validarId, articuloController.getArticuloById);
 
-// ADD: Crear un nuevo artículo con validaciones strictly
+// ADD: Crear un nuevo artículo
 router.post(
   '/',
   verificarAdmin,
@@ -133,8 +133,7 @@ router.post(
     body('descripcion')
       .trim()
       .notEmpty().withMessage('La descripción es obligatoria')
-      .isLength({ min: 3, max: 250 }).withMessage('La descripción debe tener entre 3 y 250 caracteres')
-      .escape(),
+      .isLength({ min: 3, max: 250 }).withMessage('La descripción debe tener entre 3 y 250 caracteres'),
     body('id_categoria')
       .notEmpty().withMessage('El ID de la categoría es obligatorio')
       .isInt({ min: 1 }).withMessage('El ID de la categoría debe ser un número entero mayor a 0'),
@@ -150,13 +149,13 @@ router.post(
 router.put(
   '/:id',
   verificarAdmin,
+  validarId,
   [
     body('descripcion')
       .optional()
       .trim()
       .notEmpty().withMessage('La descripción no puede estar vacía')
-      .isLength({ min: 3, max: 250 }).withMessage('La descripción debe tener entre 3 y 250 caracteres')
-      .escape(),
+      .isLength({ min: 3, max: 250 }).withMessage('La descripción debe tener entre 3 y 250 caracteres'),
     body('id_categoria')
       .optional()
       .isInt({ min: 1 }).withMessage('El ID de la categoría debe ser un número entero'),
@@ -175,13 +174,13 @@ router.put(
 router.patch(
   '/:id',
   verificarAdmin,
+  validarId,
   [
     body('descripcion')
       .optional()
       .trim()
       .notEmpty().withMessage('La descripción no puede estar vacía')
-      .isLength({ min: 3, max: 250 }).withMessage('La descripción debe tener entre 3 y 250 caracteres')
-      .escape(),
+      .isLength({ min: 3, max: 250 }).withMessage('La descripción debe tener entre 3 y 250 caracteres'),
     body('id_categoria')
       .optional()
       .isInt({ min: 1 }).withMessage('El ID de la categoría debe ser un número entero'),
@@ -190,17 +189,17 @@ router.patch(
       .isInt({ min: 1 }).withMessage('El ID del área debe ser un número entero'),
     body('activo')
       .optional()
-      .isInt({ min: 0, max: 1 }).withMessage('El estado debe ser 0 o 1'),
+      .isInt({ min: 0, max: 1 }).withMessage('El estado debe ser 0 (inactivo) o 1 (activo)'),
     validarCampos
   ],
   articuloController.actualizarArticulo
 );
 
 // DELETE: Borrado lógico / Soft delete (NO borrado físico)
-router.delete('/:id', verificarAdmin, articuloController.eliminarArticulo);
+router.delete('/:id', verificarAdmin, validarId, articuloController.eliminarArticulo);
 
 // REACTIVAR: Reactivación lógica de artículo
-router.put('/:id/reactivar', verificarAdmin, articuloController.reactivarArticulo);
-router.patch('/:id/reactivar', verificarAdmin, articuloController.reactivarArticulo);
+router.put('/:id/reactivar', verificarAdmin, validarId, articuloController.reactivarArticulo);
+router.patch('/:id/reactivar', verificarAdmin, validarId, articuloController.reactivarArticulo);
 
 export default router;

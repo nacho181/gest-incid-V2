@@ -6,24 +6,17 @@
  */
 
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import categoriaController from '../controllers/categoriaController.js';
 import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
+import { validarCampos } from '../middlewares/validar.js';
+import { validarId } from '../validators/incidenciaValidators.js';
 import ROLES from '../utils/roles.js';
 
 const router = express.Router();
 
 // Middleware estricto para validar token JWT y verificar roles del Área de Sistemas
 const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS)];
-
-// Middleware genérico para capturar errores de express-validator
-const validarCampos = (req, res, next) => {
-  const errores = validationResult(req);
-  if (!errores.isEmpty()) {
-    return res.status(400).json({ errores: errores.array() });
-  }
-  next();
-};
 
 /**
  * @openapi
@@ -112,9 +105,9 @@ const validarCampos = (req, res, next) => {
 router.get('/', verificarAdmin, categoriaController.getCategorias);
 
 // READ: Obtener detalle de una categoría por ID
-router.get('/:id', verificarAdmin, categoriaController.getCategoriaById);
+router.get('/:id', verificarAdmin, validarId, categoriaController.getCategoriaById);
 
-// ADD: Crear una nueva categoría con validación estricta
+// ADD: Crear una nueva categoría
 router.post(
   '/',
   verificarAdmin,
@@ -122,8 +115,7 @@ router.post(
     body('descripcion')
       .trim()
       .notEmpty().withMessage('La descripción es obligatoria')
-      .isLength({ min: 3, max: 255 }).withMessage('La descripción debe tener entre 3 y 255 caracteres')
-      .escape(),
+      .isLength({ min: 3, max: 255 }).withMessage('La descripción debe tener entre 3 y 255 caracteres'),
     validarCampos
   ],
   categoriaController.crearCategoria
@@ -133,13 +125,13 @@ router.post(
 router.put(
   '/:id',
   verificarAdmin,
+  validarId,
   [
     body('descripcion')
       .optional()
       .trim()
       .notEmpty().withMessage('La descripción no puede estar vacía')
-      .isLength({ min: 3, max: 255 }).withMessage('La descripción debe tener entre 3 y 255 caracteres')
-      .escape(),
+      .isLength({ min: 3, max: 255 }).withMessage('La descripción debe tener entre 3 y 255 caracteres'),
     body('activo')
       .optional()
       .isInt({ min: 0, max: 1 }).withMessage('El estado debe ser 0 (inactivo) o 1 (activo)'),
@@ -152,26 +144,26 @@ router.put(
 router.patch(
   '/:id',
   verificarAdmin,
+  validarId,
   [
     body('descripcion')
       .optional()
       .trim()
       .notEmpty().withMessage('La descripción no puede estar vacía')
-      .isLength({ min: 3, max: 255 }).withMessage('La descripción debe tener entre 3 y 255 caracteres')
-      .escape(),
+      .isLength({ min: 3, max: 255 }).withMessage('La descripción debe tener entre 3 y 255 caracteres'),
     body('activo')
       .optional()
-      .isInt({ min: 0, max: 1 }).withMessage('El estado debe ser 0 o 1'),
+      .isInt({ min: 0, max: 1 }).withMessage('El estado debe ser 0 (inactivo) o 1 (activo)'),
     validarCampos
   ],
   categoriaController.actualizarCategoria
 );
 
 // DELETE: Borrado lógico / Soft delete (NO borrado físico)
-router.delete('/:id', verificarAdmin, categoriaController.eliminarCategoria);
+router.delete('/:id', verificarAdmin, validarId, categoriaController.eliminarCategoria);
 
 // REACTIVAR: Reactivación lógica de categoría
-router.put('/:id/reactivar', verificarAdmin, categoriaController.reactivarCategoria);
-router.patch('/:id/reactivar', verificarAdmin, categoriaController.reactivarCategoria);
+router.put('/:id/reactivar', verificarAdmin, validarId, categoriaController.reactivarCategoria);
+router.patch('/:id/reactivar', verificarAdmin, validarId, categoriaController.reactivarCategoria);
 
 export default router;

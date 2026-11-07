@@ -5,21 +5,13 @@
  * ============================================================================
  */
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
 import authController from '../controllers/authController.js';
 import { verificarToken } from '../middlewares/authMiddleware.js';
 import { uploadAvatar } from '../middlewares/uploadMiddleware.js';
+import { validarCampos } from '../middlewares/validar.js';
 
 const router = express.Router();
-
-// Middleware genérico para capturar errores de express-validator
-const validarCampos = (req, res, next) => {
-  const errores = validationResult(req);
-  if (!errores.isEmpty()) {
-    return res.status(400).json({ errores: errores.array() });
-  }
-  next();
-};
 
 /**
  * @openapi
@@ -67,10 +59,8 @@ router.post(
   authController.login
 );
 
-// GET /api/v1/auth/me - Obtener información del usuario logueado
 router.get('/me', verificarToken, authController.obtenerUsuarioActual);
 
-// POST /api/v1/auth/avatar - Subir imagen de perfil con Multer
 router.post('/avatar', verificarToken, uploadAvatar.single('avatar'), authController.subirAvatar);
 
 export default router;

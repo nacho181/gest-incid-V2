@@ -9,6 +9,8 @@ import express from 'express';
 import empleadoController from '../controllers/empleadoController.js';
 import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
 import ROLES from '../utils/roles.js';
+import { validarCrearIncidencia, validarId } from '../validators/incidenciaValidators.js';
+
 
 const router = express.Router();
 
@@ -72,12 +74,11 @@ const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
 router.get('/usuarios/empleados', verificarEmpleado, empleadoController.getEmpleados);
 
 // Crear/Reportar una nueva incidencia técnica
-router.post('/incidencias', verificarSoloMunicipal, empleadoController.crearIncidencia);
+router.post('/incidencias', verificarSoloMunicipal, validarCrearIncidencia, empleadoController.crearIncidencia);
 
 // Obtener las incidencias reportadas por el empleado activo
 router.get('/incidencias/mis-incidencias', verificarEmpleado, empleadoController.getMisIncidencias);
 
 // Cancelar una incidencia propia en estado Pendiente
-router.put('/incidencias/:id/cancelar', verificarEmpleado, empleadoController.cancelarIncidencia);
-
+router.put('/incidencias/:id/cancelar', verificarEmpleado, validarId, empleadoController.cancelarIncidencia);
 export default router;

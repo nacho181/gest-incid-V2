@@ -13,6 +13,7 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
 
 import swaggerDocs from './utils/swagger.js';
 import authRoutes from './routes/authRoutes.js';
@@ -34,17 +35,45 @@ const PORT = process.env.PORT || 3000;
 
 // ============================================================================
 // MIDDLEWARES DE LA APLICACIÓN
+// El orden importa: cada middleware solo afecta a lo que se registra después.
 // ============================================================================
 
 // Control de acceso HTTP (CORS)
-app.use(cors());
+// Orígenes permitidos por CORS (configurables desde el .env)
+const origenesPermitidos = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:3000')
+  .split(',')
+  .map((o) => o.trim());
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Sin cabecera Origin (curl, tests, mismo origen): se permite
+    if (!origin || origenesPermitidos.includes(origin)) return callback(null, true);
+    const error = new Error('Origen no permitido por CORS');
+    error.statusCode = 403;
+    return callback(error);
+  }
+}));
 
 // Morgan: Registro detallado de solicitudes HTTP en consola
 app.use(morgan('dev'));
 
-// Express JSON & Urlencoded: Parseo de cuerpos de peticiones HTTP
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Parseo de cuerpos con tamaño máximo
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
+// Documentación Swagger (antes de helmet para no restringir su interfaz)
+swaggerDocs(app);
+
+// Cabeceras de seguridad HTTP (antes de los estáticos y las rutas para que les apliquen)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      // La intranet puede servirse por HTTP: no forzar la subida a HTTPS
+      'upgrade-insecure-requests': null
+    }
+  }
+}));
 
 // Servidor de archivos estáticos (Frontend Web empaquetado o desarrollo)
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
@@ -77,9 +106,6 @@ app.get('/api/v1/health', (req, res) => {
     timestamp: new Date()
   });
 });
-
-// Documentación Swagger
-swaggerDocs(app);
 
 // 404 en JSON para rutas /api inexistentes
 app.use('/api', notFoundApi);

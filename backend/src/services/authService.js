@@ -8,6 +8,7 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import usuarioRepository from '../repositories/usuarioRepository.js';
+import JWT_SECRET from '../config/jwt.js';
 
 class AuthService {
   async login(usuario, contrasenia) {
@@ -42,8 +43,7 @@ class AuthService {
       rol: usuarioAutenticado.rol
     };
 
-    const jwtSecret = process.env.JWT_SECRET || 'secreto_concordia_jwt_2026';
-    const token = jwt.sign(payload, jwtSecret, { expiresIn: '8h' });
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });;
 
     return { token, usuario: usuarioAutenticado };
   }

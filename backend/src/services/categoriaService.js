@@ -5,17 +5,27 @@
  * ============================================================================
  */
 
-import categoriaRepository from '../repositories/categoriaRepository.js';
+import categoriaRepository, { CATEGORIAS_SORT_MAP } from '../repositories/categoriaRepository.js';
+import { parsePagination, parseSort, buildPaginatedResponse } from '../utils/pagination.js';
 
 class CategoriaService {
-  async getCategorias(query) {
-    const { incluir_inactivos, todos, buscar } = query;
+  async getCategorias(query = {}) {
+    const { incluir_inactivos, todos, buscar, search, q } = query;
     const traerTodos = incluir_inactivos === 'true' || incluir_inactivos === '1' || todos === 'true' || todos === '1';
 
-    return await categoriaRepository.findAll({
+    const textoBusqueda = buscar || search || q || null;
+    const { page, limit, offset } = parsePagination(query, 10);
+    const { sortSql } = parseSort(query, CATEGORIAS_SORT_MAP, 'id_categoria', 'ASC');
+
+    const { rows, total } = await categoriaRepository.findAllPaginated({
       traerTodos,
-      buscar
+      buscar: textoBusqueda,
+      limit,
+      offset,
+      sortSql
     });
+
+    return buildPaginatedResponse(rows, total, page, limit);
   }
 
   async getCategoriaById(id) {

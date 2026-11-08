@@ -21,11 +21,6 @@ const pool = new Pool({
   database: process.env.PGDATABASE || 'incidencias_concordia',
 });
 
-// Evento que notifica la conexión exitosa
-pool.on('connect', () => {
-  console.log('Conectado exitosamente a la base de datos PostgreSQL');
-});
-
 // Evento para capturar errores inesperados en el cliente de base de datos
 pool.on('error', (err) => {
   console.error('Error inesperado en el cliente de PostgreSQL:', err);

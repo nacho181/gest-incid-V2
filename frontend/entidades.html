@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Municipalidad de Concordia - Gestión de Entidades Base</title>
+    <title>Municipalidad de Concordia - Catálogo de Artículos y Categorías</title>
 
     <!-- Custom Green Theme Styles -->
     <link rel="stylesheet" href="css/styles.css">
@@ -20,7 +20,7 @@
                 <a href="index.html" class="badge-logo bg-concordia-light text-white fw-bold px-3 py-2 rounded text-decoration-none logo-mc-interactive" title="Volver al Inicio">MC</a>
                 <div>
                     <h1 class="h5 mb-0 fw-bold text-white">Municipalidad de Concordia</h1>
-                    <span class="small text-concordia-accent">Entre Ríos • Entidades Base (Categorías y Artículos)</span>
+                    <span class="small text-concordia-accent">Entre Ríos • Catálogo de Artículos y Categorías</span>
                 </div>
             </div>
 
@@ -58,24 +58,24 @@
         <section class="card border-0 bg-concordia-gradient text-white p-4 mb-4 shadow-sm rounded-3">
             <div class="card-body p-0 d-flex flex-wrap justify-content-between align-items-center">
                 <div>
-                    <h2 class="h4 fw-bold mb-1">Administración de Entidades Base</h2>
+                    <h2 class="h4 fw-bold mb-1">Catálogo de Artículos y Categorías</h2>
                     <p class="mb-0 text-white-50">
-                       Administre, actualice y resguarde su catálogo de registros garantizando la integridad absoluta del sistema
+                       Administración y organización de las clasificaciones y equipamientos municipales disponibles para el reporte de incidencias
                     </p>
                 </div>
             </div>
         </section>
 
         <!-- Pestañas de Navegación Entidades Base -->
-        <ul class="nav nav-tabs border-bottom-2 mb-4" id="entidadesTabs" role="tablist">
+        <ul class="nav nav-tabs mb-4" id="entidadesTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold text-concordia" id="tab-btn-categorias" data-bs-toggle="tab" data-bs-target="#tab-categorias" type="button" role="tab">
+                <button class="nav-link active fw-bold" id="tab-btn-categorias" data-bs-toggle="tab" data-bs-target="#tab-categorias" type="button" role="tab" aria-controls="tab-categorias" aria-selected="true">
                     <i class="bi bi-tags me-1"></i> Categorías
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-muted" id="tab-btn-articulos" data-bs-toggle="tab" data-bs-target="#tab-articulos" type="button" role="tab">
-                    <i class="bi bi-box-seam me-1"></i> Artículos / Equipamientos
+                <button class="nav-link fw-bold" id="tab-btn-articulos" data-bs-toggle="tab" data-bs-target="#tab-articulos" type="button" role="tab" aria-controls="tab-articulos" aria-selected="false">
+                    <i class="bi bi-box-seam me-1"></i> Artículos y Equipamientos
                 </button>
             </li>
         </ul>
@@ -84,39 +84,47 @@
         <div class="tab-content" id="entidadesTabsContent">
 
             <!-- ============================================================= -->
-            <!-- TAB 1: CATEGORÍAS (BREAD)                                     -->
+            <!-- TAB 1: CATEGORÍAS                                             -->
             <!-- ============================================================= -->
             <div class="tab-pane fade show active" id="tab-categorias" role="tabpanel">
                 <div class="card border-0 shadow-sm rounded-3 p-4 mb-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <!-- Encabezado de la Sección y Botonera Superior -->
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 pb-2 border-bottom">
                         <div>
                             <h3 class="h5 fw-bold text-concordia-dark mb-0">Catálogo de Categorías</h3>
                             <span class="small text-muted">Gestión de familias y agrupaciones de equipamiento técnico</span>
                         </div>
-                        <div class="d-flex flex-wrap align-items-center gap-2">
-                            <div class="form-check form-switch me-2">
-                                <input class="form-check-input" type="checkbox" id="chkInactivosCategorias">
-                                <label class="form-check-label small fw-semibold text-muted" for="chkInactivosCategorias">Mostrar inactivas</label>
-                            </div>
-                            <input type="text" id="txtBuscarCategoria" class="form-control form-control-sm" style="max-width: 220px;" placeholder="Buscar categoría...">
-                            <button id="btnNuevaCategoria" class="btn btn-concordia btn-sm fw-semibold">
-                                <i class="bi bi-plus-circle me-1"></i> Nueva Categoría
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="btnRefrescarCategorias" class="btn btn-outline-concordia btn-sm fw-semibold d-inline-flex align-items-center text-nowrap">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
                             </button>
-                            <button id="btnRefrescarCategorias" class="btn btn-outline-concordia btn-sm" title="Refrescar">
-                                <i class="bi bi-arrow-clockwise"></i>
+                            <button id="btnNuevaCategoria" class="btn btn-concordia btn-sm fw-semibold d-inline-flex align-items-center text-nowrap">
+                                <i class="bi bi-plus-circle me-1"></i> Nueva Categoría
                             </button>
                         </div>
                     </div>
 
-                    <!-- Tabla de Categorías (Browse) -->
+                    <!-- Barra de Filtros y Búsqueda Unificada -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <div class="form-check form-switch mb-0 d-flex align-items-center me-2">
+                            <input class="form-check-input mt-0 me-2" type="checkbox" id="chkInactivosCategorias" role="switch">
+                            <label class="form-check-label small fw-semibold text-muted text-nowrap mb-0" for="chkInactivosCategorias">Mostrar inactivas</label>
+                        </div>
+                        <div class="input-group input-group-sm flex-grow-1" style="min-width: 200px; max-width: 320px;">
+                            <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" id="txtBuscarCategoria" class="form-control form-control-sm border-start-0" placeholder="Buscar categoría...">
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Categorías -->
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-concordia">
                                 <tr>
-                                    <th style="width: 80px;"># ID</th>
-                                    <th>Descripción</th>
-                                    <th style="width: 140px;">Estado</th>
-                                    <th class="text-end" style="width: 220px;">Acciones</th>
+                                    <th class="text-start" style="width: 100px;">Código</th>
+                                    <th class="text-start">Nombre de la Categoría</th>
+                                    <th class="text-center" style="width: 140px;">Estado</th>
+                                    <th class="text-end" style="width: 170px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="tbodyCategorias">
@@ -126,51 +134,66 @@
                             </tbody>
                         </table>
                     </div>
+                    <!-- Barra de Paginación de Categorías -->
+                    <div class="card-footer bg-white border-top d-flex flex-column flex-md-row justify-content-between align-items-center py-2 px-0 gap-2 mt-3">
+                        <span class="text-muted small" id="lblInfoPaginacionCategorias">Cargando paginación...</span>
+                        <nav aria-label="Navegación de páginas de categorías">
+                            <ul class="pagination pagination-sm mb-0" id="paginacionCategorias"></ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
 
             <!-- ============================================================= -->
-            <!-- TAB 2: ARTÍCULOS (BREAD)                                      -->
+            <!-- TAB 2: ARTÍCULOS                                              -->
             <!-- ============================================================= -->
             <div class="tab-pane fade" id="tab-articulos" role="tabpanel">
                 <div class="card border-0 shadow-sm rounded-3 p-4 mb-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <!-- Encabezado de la Sección y Botonera Superior -->
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 pb-2 border-bottom">
                         <div>
-                            <h3 class="h5 fw-bold text-concordia-dark mb-0">Catálogo de Artículos y Equipamientos</h3>
-                            <span class="small text-muted">Gestión del inventario informático y mobiliario municipal</span>
+                            <h3 class="h5 fw-bold text-concordia-dark mb-0">Catálogo de Artículos y Equipamiento</h3>
+                            <span class="small text-muted">Gestión del equipamiento informático y mobiliario municipal</span>
                         </div>
-                        <div class="d-flex flex-wrap align-items-center gap-2">
-                            <div class="form-check form-switch me-2">
-                                <input class="form-check-input" type="checkbox" id="chkInactivosArticulos">
-                                <label class="form-check-label small fw-semibold text-muted" for="chkInactivosArticulos">Mostrar inactivos</label>
-                            </div>
-                            <select id="filtroCategoriaArticulo" class="form-select form-select-sm" style="max-width: 180px;">
-                                <option value="">Todas las Categorías</option>
-                            </select>
-                            <select id="filtroAreaArticulo" class="form-select form-select-sm" style="max-width: 160px;">
-                                <option value="">Todas las Áreas</option>
-                            </select>
-                            <input type="text" id="txtBuscarArticulo" class="form-control form-control-sm" style="max-width: 180px;" placeholder="Buscar artículo...">
-                            <button id="btnNuevoArticulo" class="btn btn-concordia btn-sm fw-semibold">
-                                <i class="bi bi-plus-circle me-1"></i> Nuevo Artículo
+                        <div class="d-flex align-items-center gap-2">
+                            <button id="btnRefrescarArticulos" class="btn btn-outline-concordia btn-sm fw-semibold d-inline-flex align-items-center text-nowrap">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
                             </button>
-                            <button id="btnRefrescarArticulos" class="btn btn-outline-concordia btn-sm" title="Refrescar">
-                                <i class="bi bi-arrow-clockwise"></i>
+                            <button id="btnNuevoArticulo" class="btn btn-concordia btn-sm fw-semibold d-inline-flex align-items-center text-nowrap">
+                                <i class="bi bi-plus-circle me-1"></i> Nuevo Artículo
                             </button>
                         </div>
                     </div>
 
-                    <!-- Tabla de Artículos (Browse) -->
+                    <!-- Barra de Filtros y Búsqueda Unificada -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <div class="form-check form-switch mb-0 d-flex align-items-center me-2">
+                            <input class="form-check-input mt-0 me-2" type="checkbox" id="chkInactivosArticulos" role="switch">
+                            <label class="form-check-label small fw-semibold text-muted text-nowrap mb-0" for="chkInactivosArticulos">Mostrar inactivos</label>
+                        </div>
+                        <select id="filtroCategoriaArticulo" class="form-select form-select-sm" style="width: auto; min-width: 170px;" aria-label="Filtrar por categoría">
+                            <option value="">Todas las Categorías</option>
+                        </select>
+                        <select id="filtroAreaArticulo" class="form-select form-select-sm" style="width: auto; min-width: 170px;" aria-label="Filtrar por área">
+                            <option value="">Todas las Áreas</option>
+                        </select>
+                        <div class="input-group input-group-sm flex-grow-1" style="min-width: 220px;">
+                            <span class="input-group-text bg-light text-muted border-end-0"><i class="bi bi-search"></i></span>
+                            <input type="text" id="txtBuscarArticulo" class="form-control form-control-sm border-start-0" placeholder="Buscar artículo...">
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Artículos -->
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 w-100">
                             <thead class="table-concordia">
                                 <tr>
-                                    <th style="width: 80px;"># ID</th>
-                                    <th>Descripción</th>
-                                    <th>Categoría</th>
-                                    <th>Área Asignada</th>
-                                    <th style="width: 140px;">Estado</th>
-                                    <th class="text-end" style="width: 220px;">Acciones</th>
+                                    <th class="text-start" style="width: 70px;">Código</th>
+                                    <th class="text-start">Descripción del Artículo</th>
+                                    <th class="text-start" style="width: 170px;">Categoría</th>
+                                    <th class="text-start" style="width: 190px;">Área Asignada</th>
+                                    <th class="text-center" style="width: 120px;">Estado</th>
+                                    <th class="text-end" style="width: 140px;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="tbodyArticulos">
@@ -179,6 +202,13 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Barra de Paginación de Artículos -->
+                    <div class="card-footer bg-white border-top d-flex flex-column flex-md-row justify-content-between align-items-center py-2 px-0 gap-2 mt-3">
+                        <span class="text-muted small" id="lblInfoPaginacionArticulos">Cargando paginación...</span>
+                        <nav aria-label="Navegación de páginas de artículos">
+                            <ul class="pagination pagination-sm mb-0" id="paginacionArticulos"></ul>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -190,7 +220,7 @@
     <!-- MODALES DE CATEGORÍAS                                                      -->
     <!-- ========================================================================= -->
 
-    <!-- Modal Crear / Editar Categoría (Add / Edit) -->
+    <!-- Modal Crear / Editar Categoría -->
     <div class="modal fade" id="modalCategoriaForm" tabindex="-1" aria-labelledby="modalCategoriaFormLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content rounded-4 border-0 shadow">
@@ -204,15 +234,15 @@
                     <div class="modal-body p-4">
                         <input type="hidden" id="txtCatId">
                         <div class="mb-3">
-                            <label for="txtCatDescripcion" class="form-label fw-semibold">Descripción de la Categoría *</label>
+                            <label for="txtCatDescripcion" class="form-label fw-semibold">Nombre de la Categoría *</label>
                             <input type="text" id="txtCatDescripcion" class="form-control" placeholder="Ej: Impresoras y Escáneres" required>
                             <div class="form-text">Nombre representativo para agrupar los artículos.</div>
                         </div>
                         <div class="mb-3 d-none" id="divCatEstado">
-                            <label for="selectCatActivo" class="form-label fw-semibold">Estado del Registro</label>
+                            <label for="selectCatActivo" class="form-label fw-semibold">Estado</label>
                             <select id="selectCatActivo" class="form-select">
-                                <option value="1">Activo (1)</option>
-                                <option value="0">Inactivo / Baja Lógica (0)</option>
+                                <option value="1">Activo</option>
+                                <option value="0">Inactivo</option>
                             </select>
                         </div>
                     </div>
@@ -227,7 +257,7 @@
         </div>
     </div>
 
-    <!-- Modal Detalle de Categoría (Read) -->
+    <!-- Modal Detalle de Categoría -->
     <div class="modal fade" id="modalCategoriaDetalle" tabindex="-1" aria-labelledby="modalCatDetalleLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content rounded-4 border-0 shadow">
@@ -239,15 +269,15 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="text-muted small fw-bold text-uppercase">Identificador (# ID)</label>
+                        <label class="text-muted small fw-bold text-uppercase">Código de Categoría</label>
                         <div id="detCatId" class="h5 fw-bold text-dark">-</div>
                     </div>
                     <div class="mb-3">
-                        <label class="text-muted small fw-bold text-uppercase">Descripción</label>
+                        <label class="text-muted small fw-bold text-uppercase">Nombre de la Categoría</label>
                         <div id="detCatDescripcion" class="h6 text-dark">-</div>
                     </div>
                     <div class="mb-2">
-                        <label class="text-muted small fw-bold text-uppercase">Estado del Registro</label>
+                        <label class="text-muted small fw-bold text-uppercase">Estado</label>
                         <div id="detCatEstado">-</div>
                     </div>
                 </div>
@@ -262,7 +292,7 @@
     <!-- MODALES DE ARTÍCULOS                                                       -->
     <!-- ========================================================================= -->
 
-    <!-- Modal Crear / Editar Artículo (Add / Edit) -->
+    <!-- Modal Crear / Editar Artículo -->
     <div class="modal fade" id="modalArticuloForm" tabindex="-1" aria-labelledby="modalArticuloFormLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content rounded-4 border-0 shadow">
@@ -292,10 +322,10 @@
                             </select>
                         </div>
                         <div class="mb-3 d-none" id="divArtEstado">
-                            <label for="selectArtActivo" class="form-label fw-semibold">Estado del Registro</label>
+                            <label for="selectArtActivo" class="form-label fw-semibold">Estado</label>
                             <select id="selectArtActivo" class="form-select">
-                                <option value="1">Activo (1)</option>
-                                <option value="0">Inactivo / Baja Lógica (0)</option>
+                                <option value="1">Activo</option>
+                                <option value="0">Inactivo</option>
                             </select>
                         </div>
                     </div>
@@ -310,7 +340,7 @@
         </div>
     </div>
 
-    <!-- Modal Detalle de Artículo (Read) -->
+    <!-- Modal Detalle de Artículo -->
     <div class="modal fade" id="modalArticuloDetalle" tabindex="-1" aria-labelledby="modalArtDetalleLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content rounded-4 border-0 shadow">
@@ -322,7 +352,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="text-muted small fw-bold text-uppercase">Identificador (# ID)</label>
+                        <label class="text-muted small fw-bold text-uppercase">Código de Artículo</label>
                         <div id="detArtId" class="h5 fw-bold text-dark">-</div>
                     </div>
                     <div class="mb-3">
@@ -338,7 +368,7 @@
                         <div id="detArtArea" class="text-dark">-</div>
                     </div>
                     <div class="mb-2">
-                        <label class="text-muted small fw-bold text-uppercase">Estado del Registro</label>
+                        <label class="text-muted small fw-bold text-uppercase">Estado</label>
                         <div id="detArtEstado">-</div>
                     </div>
                 </div>
@@ -349,28 +379,28 @@
         </div>
     </div>
 
-    <!-- Modal Confirmación de Baja Lógica (Soft Delete) -->
+    <!-- Modal Confirmación de Baja de Registro -->
     <div class="modal fade" id="modalConfirmSoftDelete" tabindex="-1" aria-labelledby="modalConfirmDeleteLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content rounded-4 border-0 shadow">
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title fw-bold" id="modalConfirmDeleteLabel">
-                        <i class="bi bi-exclamation-triangle me-1"></i> Confirmar Baja Lógica (Soft Delete)
+                        <i class="bi bi-exclamation-triangle me-1"></i> Confirmar Baja de Registro
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <p class="mb-2">¿Estás seguro de que deseas dar de baja el siguiente registro?</p>
+                    <p class="mb-2">¿Está seguro de que desea dar de baja el siguiente registro?</p>
                     <div class="alert alert-light border fw-semibold" id="lblDetalleItemBorrar">-</div>
                     <div class="small text-muted">
-                        <i class="bi bi-info-circle me-1 text-primary"></i>
-                        <strong>Aviso de Borrado Lógico:</strong> El registro pasará al estado inactivo (<code>activo = 0</code>). <em>No se ejecutará ningún borrado físico en la base de datos</em> y el historial se preservará íntegramente.
+                        <i class="bi bi-info-circle me-1 text-concordia"></i>
+                        <strong>Aviso:</strong> El registro pasará al estado inactivo y dejará de estar disponible para nuevas incidencias. Toda la información histórica se conservará íntegramente.
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-3 pt-0">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" id="btnEjecutarSoftDelete" class="btn btn-danger btn-sm fw-bold">
-                        <i class="bi bi-trash3 me-1"></i> Confirmar Baja Lógica
+                        <i class="bi bi-slash-circle me-1"></i> Dar de Baja
                     </button>
                 </div>
             </div>
@@ -380,7 +410,7 @@
     <!-- Pie de Página Institucional -->
     <footer class="footer bg-dark text-light py-3 mt-auto">
         <div class="container text-center small text-white-50">
-            &copy; 2026 Municipalidad de Concordia - Entre Ríos. Trabajo Final Integrador de Programación.
+            &copy; 2026 Municipalidad de Concordia - Entre Ríos. Sistema Integral de Gestión de Incidencias.
         </div>
     </footer>
 

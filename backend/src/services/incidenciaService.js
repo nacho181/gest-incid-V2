@@ -1,8 +1,9 @@
-import incidenciaRepository from '../repositories/incidenciaRepository.js';
+import incidenciaRepository, { INCIDENCIAS_SORT_MAP } from '../repositories/incidenciaRepository.js';
 import empleadoService from './empleadoService.js';
 import directorService from './directorService.js';
 import sistemasService from './sistemasService.js';
 import ROLES from '../utils/roles.js';
+import { parsePagination, parseSort, buildPaginatedResponse } from '../utils/pagination.js';
 
 function error(mensaje, statusCode) {
   const e = new Error(mensaje);
@@ -11,15 +12,68 @@ function error(mensaje, statusCode) {
 }
 
 class IncidenciaService {
-  async listar(usuario) {
+  async listar(usuario, query = {}) {
+    const { page, limit, offset } = parsePagination(query, 10);
+    const { id_estado, prioridad, id_articulo, id_area, asignado_a, buscar, search, q } = query;
+    const textoBusqueda = buscar || search || q || null;
+
+    let creado_por_filtro = null;
+    let asignado_a_filtro = null;
+    let sortSql = null;
+
     switch (usuario.rol) {
       case ROLES.DIRECTOR:
-        return await incidenciaRepository.findAll();
+        // El Director puede ver todas y filtrar opcionalmente por asignado_a o creador
+        if (asignado_a !== undefined && asignado_a !== '') {
+          asignado_a_filtro = asignado_a;
+        }
+        if (query.creado_por !== undefined && query.creado_por !== '') {
+          creado_por_filtro = query.creado_por;
+        }
+        sortSql = parseSort(query, INCIDENCIAS_SORT_MAP, 'creado', 'DESC').sortSql;
+        break;
+
       case ROLES.SISTEMAS:
-        return await incidenciaRepository.findAsignadasATecnico(usuario.id_usuario);
+        // El técnico de Sistemas solo ve las incidencias asignadas a él
+        asignado_a_filtro = usuario.id_usuario;
+        if (query.order_by) {
+          sortSql = parseSort(query, INCIDENCIAS_SORT_MAP, 'creado', 'DESC').sortSql;
+        } else {
+          // Orden de trabajo prioritario para el personal técnico
+          sortSql = `
+            CASE
+              WHEN inc.id_estado = 1 THEN 1
+              WHEN inc.id_estado = 2 THEN 2
+              WHEN inc.id_estado = 3 THEN 3
+              ELSE 4
+            END ASC,
+            inc.prioridad ASC,
+            inc.creado DESC
+          `;
+        }
+        break;
+
       default:
-        return await incidenciaRepository.findByUsuarioCreador(usuario.id_usuario);
+        // Empleado municipal: solo ve las incidencias creadas por él
+        creado_por_filtro = usuario.id_usuario;
+        sortSql = parseSort(query, INCIDENCIAS_SORT_MAP, 'creado', 'DESC').sortSql;
+        break;
     }
+
+    const { rows, total } = await incidenciaRepository.findAllPaginated({
+      creado_por: creado_por_filtro,
+      asignado_a: asignado_a_filtro,
+      id_estado: id_estado || null,
+      prioridad: prioridad || null,
+      id_articulo: id_articulo || null,
+      id_area: id_area || null,
+      buscar: textoBusqueda,
+      limit,
+      offset,
+      sortSql
+    });
+
+    return buildPaginatedResponse(rows, total, page, limit);
   }
 
   async crear({ id_articulo, prioridad, descripcion_pedido }, usuario) {

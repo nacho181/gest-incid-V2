@@ -29,18 +29,6 @@ class UsuarioRepository {
     return rows[0] || null;
   }
 
-  async findEmpleados() {
-    const queryText = `
-      SELECT u.id_usuario, u.nombres, u.apellidos, u.usuario, u.rol, u.activo, a.descripcion AS area_descripcion
-      FROM public.usuarios u
-      JOIN public.areas a ON u.id_area = a.id_area
-      WHERE u.activo = 1 AND u.id_usuario != 0
-      ORDER BY u.id_usuario ASC
-    `;
-    const { rows } = await db.query(queryText);
-    return rows;
-  }
-
   async findEmpleadosSistemas() {
     const queryText = `
       SELECT u.id_usuario, u.nombres, u.apellidos, u.usuario, u.rol, u.activo, a.descripcion AS area_descripcion

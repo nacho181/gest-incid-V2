@@ -5,10 +5,8 @@
  */
 
 import * as bootstrap from 'bootstrap';
-import html2pdf from 'html2pdf.js';
 
 window.bootstrap = bootstrap;
-window.html2pdf = html2pdf;
 
 // URL Base de la API REST
 const API_BASE_URL = '/api/v1';
@@ -17,8 +15,16 @@ const API_BASE_URL = '/api/v1';
 let tokenJWT = localStorage.getItem('jwt_token') || localStorage.getItem('token') || '';
 let empleadosSistemas = [];
 let incidenciaSeleccionadaModal = null;
+let idIncidenciaCancelarDirector = null;
 let bsToastDirector = null;
 let modalAsignarInstance = null;
+let modalCancelarDirectorInstance = null;
+
+// Variables de paginación para Gestión de Incidencias
+let paginaActualGestion = 1;
+const limiteGestion = 10;
+let totalRegistrosGestion = 0;
+let totalPaginasGestion = 1;
 
 /**
  * Evento principal DOMContentLoaded
@@ -33,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!tokenJWT || !userData || userData.rol !== 1) {
-        console.warn('Acceso denegado: Usuario no autorizado para el Panel de Director');
         window.location.href = 'index.html';
         return;
     }
@@ -44,10 +49,14 @@ document.addEventListener('DOMContentLoaded', () => {
         bsToastDirector = new bootstrap.Toast(toastEl, { delay: 4000 });
     }
 
-    // Inicializar Modal de Asignación de Bootstrap
+    // Inicializar Modal de Asignación y Cancelación de Bootstrap
     const modalEl = document.getElementById('modalAsignar');
     if (modalEl && window.bootstrap) {
         modalAsignarInstance = new bootstrap.Modal(modalEl);
+    }
+    const modalCancelEl = document.getElementById('modalConfirmarCancelacionDirector');
+    if (modalCancelEl && window.bootstrap) {
+        modalCancelarDirectorInstance = new bootstrap.Modal(modalCancelEl);
     }
 
     // Configurar fecha actual de emisión en reporte
@@ -126,10 +135,23 @@ function setupEventListenersDirector() {
     // Botón de refrescar gestión de incidencias
     const btnRefresh = document.getElementById('btnRefreshGestion');
     if (btnRefresh) {
-        btnRefresh.addEventListener('click', () => {
-            cargarGestionIncidencias();
+        btnRefresh.addEventListener('click', (e) => {
+            e.currentTarget?.blur();
+            cargarGestionIncidencias(paginaActualGestion);
             cargarDashboard();
             mostrarToastDirector('Listado de gestión actualizado', 'info');
+        });
+    }
+
+    // Botón de acceso rápido a Gestión desde Incidencias Prioritarias
+    const btnVerTodas = document.getElementById('btnVerTodasGestion');
+    if (btnVerTodas) {
+        btnVerTodas.addEventListener('click', () => {
+            const tabBtn = document.querySelector('button[data-bs-target="#tab-gestion"]');
+            if (tabBtn && window.bootstrap) {
+                const tab = new bootstrap.Tab(tabBtn);
+                tab.show();
+            }
         });
     }
 
@@ -139,10 +161,32 @@ function setupEventListenersDirector() {
         btnConfirmar.addEventListener('click', ejecutarAsignacion);
     }
 
-    // Botón para la generación e impresión del reporte PDF
+    // Botón de confirmar cancelación en el modal
+    const btnConfirmarCancel = document.getElementById('btnConfirmarCancelacionDirector');
+    if (btnConfirmarCancel) {
+        btnConfirmarCancel.addEventListener('click', ejecutarCancelacionDirector);
+    }
+
+    // Botón para la generación y descarga del reporte PDF
     const btnPDF = document.getElementById('btnGenerarPDF');
     if (btnPDF) {
         btnPDF.addEventListener('click', generarReportePDF);
+    }
+
+    // Botón para limpiar los filtros de reporte
+    const btnLimpiar = document.getElementById('btnLimpiarFiltrosReporte');
+    if (btnLimpiar) {
+        btnLimpiar.addEventListener('click', () => {
+            const fDesde = document.getElementById('filtroReporteDesde');
+            const fHasta = document.getElementById('filtroReporteHasta');
+            const fEstado = document.getElementById('filtroReporteEstado');
+            const fTecnico = document.getElementById('filtroReporteTecnico');
+            if (fDesde) fDesde.value = '';
+            if (fHasta) fHasta.value = '';
+            if (fEstado) fEstado.value = '';
+            if (fTecnico) fTecnico.value = '';
+            mostrarToastDirector('Filtros del reporte restablecidos.', 'info');
+        });
     }
 
     // Delegación de eventos para la tabla de gestión de incidencias
@@ -242,7 +286,7 @@ async function cargarDashboard() {
         if (tbodyPrio) {
             tbodyPrio.innerHTML = '';
             if (!data.prioritarias || data.prioritarias.length === 0) {
-                tbodyPrio.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No existen incidencias de alta prioridad activas</td></tr>';
+                tbodyPrio.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No existen incidencias urgentes activas</td></tr>';
             } else {
                 data.prioritarias.forEach(inc => {
                     const tr = document.createElement('tr');
@@ -263,7 +307,7 @@ async function cargarDashboard() {
                     tr.innerHTML = `
                         <td class="fw-bold">#${inc.id_incidencia}</td>
                         <td class="small">${fechaFmt}</td>
-                        <td class="small fw-semibold">${escapeHtml(inc.articulo_descripcion || 'Artículo')} - ${escapeHtml(inc.descripcion_pedido || '')}</td>
+                        <td class="small fw-semibold">${escapeHtml(inc.articulo_descripcion || 'Equipo')} - ${escapeHtml(inc.descripcion_pedido || '')}</td>
                         <td>${badgeEstado}</td>
                         <td class="small text-muted">${escapeHtml(inc.asignado_nombre || 'Sin Asignar')}</td>
                     `;
@@ -303,33 +347,57 @@ async function cargarEmpleadosSistemas() {
                 select.appendChild(opt);
             });
         }
+
+        // Poblar selector de técnicos en los filtros de reporte PDF
+        const selectFiltro = document.getElementById('filtroReporteTecnico');
+        if (selectFiltro) {
+            selectFiltro.innerHTML = '<option value="">Todos los Técnicos</option><option value="0">Sin Asignar</option>';
+            empleadosSistemas.forEach(emp => {
+                const opt = document.createElement('option');
+                opt.value = emp.id_usuario;
+                opt.textContent = `${emp.nombres} ${emp.apellidos}`;
+                selectFiltro.appendChild(opt);
+            });
+        }
     } catch (error) {
         console.error('Error al cargar empleados de sistemas:', error);
     }
 }
 
 /**
- * Carga todas las incidencias para la tabla interactiva de gestión y asignación.
- * GET /incidencias (el Director recibe todas).
+ * Carga todas las incidencias para la tabla interactiva de gestión y asignación con paginación LIMIT/OFFSET.
+ * GET /incidencias (el Director recibe todas con soporte de page y limit).
  */
-async function cargarGestionIncidencias() {
+async function cargarGestionIncidencias(pagina = 1) {
+    paginaActualGestion = pagina;
     const tbody = document.getElementById('tbodyGestion');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Cargando incidencias...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-concordia me-2"></div>Cargando incidencias...</td></tr>';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/incidencias`, {
+        const response = await fetch(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteGestion}&order_by=creado&order_dir=DESC`, {
             headers: getAuthHeaders()
         });
 
         if (!response.ok) throw new Error('Error al obtener incidencias para gestión');
 
-        const incidencias = await response.json();
+        const rawData = await response.json();
+        const incidencias = Array.isArray(rawData) ? rawData : (rawData.data || []);
+        const pagination = rawData.pagination || {
+            total: incidencias.length,
+            page: pagina,
+            limit: limiteGestion,
+            total_pages: Math.ceil(incidencias.length / limiteGestion) || 1
+        };
+
+        totalRegistrosGestion = pagination.total;
+        totalPaginasGestion = pagination.total_pages || 1;
         tbody.innerHTML = '';
 
         if (!incidencias || incidencias.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No hay incidencias registradas.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No se encontraron incidencias registradas.</td></tr>';
+            actualizarPaginadorGestion();
             return;
         }
 
@@ -360,10 +428,10 @@ async function cargarGestionIncidencias() {
 
             // Botón para Asignar (deshabilitado si ya está Finalizada o Cancelada)
             const btnAsignar = (esCancelada || esFinalizada)
-                ? `<button class="btn btn-sm btn-outline-secondary me-1 fw-semibold" disabled title="La incidencia ya está cerrada">Asignar</button>`
+                ? `<button class="btn btn-sm btn-outline-secondary me-1 fw-semibold" disabled title="La incidencia ya se encuentra cerrada">Asignar</button>`
                 : `<button data-action="asignar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-concordia me-1 fw-semibold">Asignar</button>`;
 
-            // Botón para Cancelar (soft delete habilitado únicamente si está Pendiente)
+            // Botón para Cancelar (habilitado únicamente si está Pendiente)
             const btnCancelar = esPendiente
                 ? `<button data-action="cancelar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-danger fw-semibold">Cancelar</button>`
                 : `<span class="text-muted small">N/A</span>`;
@@ -371,7 +439,7 @@ async function cargarGestionIncidencias() {
             tr.innerHTML = `
                 <td class="fw-bold">#${inc.id_incidencia}</td>
                 <td class="small fw-semibold">${escapeHtml(inc.usuario_creador || 'Empleado')}</td>
-                <td class="small">${escapeHtml(inc.articulo_descripcion || 'Artículo')}</td>
+                <td class="small">${escapeHtml(inc.articulo_descripcion || 'Equipo')}</td>
                 <td class="small text-wrap" style="max-width: 200px;">${escapeHtml(inc.descripcion_pedido || '')}</td>
                 <td>${badgePrio}</td>
                 <td>${badgeEst}</td>
@@ -382,10 +450,114 @@ async function cargarGestionIncidencias() {
             tbody.appendChild(tr);
         });
 
+        actualizarPaginadorGestion();
+
     } catch (error) {
         console.error('Error en gestión de incidencias:', error);
         tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">Error de conexión al cargar el listado.</td></tr>';
     }
+}
+
+function actualizarPaginadorGestion() {
+    const ulPag = document.getElementById('paginacionDirector');
+    const lblInfo = document.getElementById('lblInfoPaginacionDirector');
+
+    renderizarPaginador({
+        ulElement: ulPag,
+        infoElement: lblInfo,
+        total: totalRegistrosGestion,
+        page: paginaActualGestion,
+        limit: limiteGestion,
+        totalPages: totalPaginasGestion,
+        onCambiarPagina: (nuevaPagina) => cargarGestionIncidencias(nuevaPagina),
+        singular: 'incidencia',
+        plural: 'incidencias'
+    });
+}
+
+function renderizarPaginador({ ulElement, infoElement, total, page, limit, totalPages, onCambiarPagina, singular = 'registro', plural = 'registros' }) {
+    if (!ulElement) return;
+    ulElement.innerHTML = '';
+
+    const totalNum = parseInt(total, 10) || 0;
+    const pagActual = parseInt(page, 10) || 1;
+    const cantPaginas = parseInt(totalPages, 10) || 1;
+
+    if (infoElement) {
+        if (totalNum === 0) {
+            infoElement.textContent = `No se encontraron ${plural}`;
+        } else {
+            const desde = (pagActual - 1) * limit + 1;
+            const hasta = Math.min(pagActual * limit, totalNum);
+            infoElement.textContent = `Mostrando ${desde} a ${hasta} de ${totalNum} ${totalNum === 1 ? singular : plural}`;
+        }
+    }
+
+    if (cantPaginas <= 1) return;
+
+    // Botón Anterior
+    const liPrev = document.createElement('li');
+    liPrev.className = `page-item ${pagActual <= 1 ? 'disabled' : ''}`;
+    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">&laquo;</button>`;
+    if (pagActual > 1) {
+        liPrev.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual - 1));
+    }
+    ulElement.appendChild(liPrev);
+
+    let inicio = Math.max(1, pagActual - 2);
+    let fin = Math.min(cantPaginas, inicio + 4);
+    if (fin - inicio < 4) {
+        inicio = Math.max(1, fin - 4);
+    }
+
+    if (inicio > 1) {
+        const li1 = document.createElement('li');
+        li1.className = 'page-item';
+        li1.innerHTML = `<button class="page-link" type="button">1</button>`;
+        li1.querySelector('button').addEventListener('click', () => onCambiarPagina(1));
+        ulElement.appendChild(li1);
+
+        if (inicio > 2) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ulElement.appendChild(liDots);
+        }
+    }
+
+    for (let i = inicio; i <= fin; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === pagActual ? 'active' : ''}`;
+        li.innerHTML = `<button class="page-link" type="button">${i}</button>`;
+        if (i !== pagActual) {
+            const n = i;
+            li.querySelector('button').addEventListener('click', () => onCambiarPagina(n));
+        }
+        ulElement.appendChild(li);
+    }
+
+    if (fin < cantPaginas) {
+        if (fin < cantPaginas - 1) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ulElement.appendChild(liDots);
+        }
+        const liFin = document.createElement('li');
+        liFin.className = 'page-item';
+        liFin.innerHTML = `<button class="page-link" type="button">${cantPaginas}</button>`;
+        liFin.querySelector('button').addEventListener('click', () => onCambiarPagina(cantPaginas));
+        ulElement.appendChild(liFin);
+    }
+
+    // Botón Siguiente
+    const liNext = document.createElement('li');
+    liNext.className = `page-item ${pagActual >= cantPaginas ? 'disabled' : ''}`;
+    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">&raquo;</button>`;
+    if (pagActual < cantPaginas) {
+        liNext.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual + 1));
+    }
+    ulElement.appendChild(liNext);
 }
 
 /**
@@ -412,7 +584,7 @@ async function ejecutarAsignacion() {
     const id_usuario_sistemas = parseInt(select.value, 10);
 
     if (!id_usuario_sistemas) {
-        mostrarToastDirector('Por favor selecciona un técnico de Sistemas.', 'error');
+        mostrarToastDirector('Por favor, seleccione un técnico responsable.', 'error');
         return;
     }
 
@@ -426,7 +598,7 @@ async function ejecutarAsignacion() {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.mensaje || 'Error al asignar la incidencia');
+            throw new Error(data.mensaje || 'No fue posible asignar la incidencia. Por favor, intente nuevamente.');
         }
 
         mostrarToastDirector(`Incidencia #${incidenciaSeleccionadaModal} asignada con éxito.`, 'exito');
@@ -436,24 +608,35 @@ async function ejecutarAsignacion() {
         }
 
         // Actualizar vistas
-        cargarGestionIncidencias();
+        cargarGestionIncidencias(paginaActualGestion);
         cargarDashboard();
 
     } catch (error) {
         console.error('Error asignando incidencia:', error);
-        mostrarToastDirector(`Error: ${error.message}`, 'error');
+        mostrarToastDirector(error.message, 'error');
     }
 }
 
 /**
- * Cancela (soft delete) una incidencia con estado 'Pendiente'.
- * PATCH /incidencias/:id con { id_estado: 4 }.
+ * Abre el modal de confirmación para cancelar una incidencia en estado 'Pendiente'.
  * @param {number} idIncidencia - ID de la incidencia.
  */
-async function cancelarIncidenciaDirector(idIncidencia) {
-    if (!confirm(`¿Confirmas la cancelación (soft delete) de la incidencia #${idIncidencia}?`)) {
-        return;
+function cancelarIncidenciaDirector(idIncidencia) {
+    idIncidenciaCancelarDirector = idIncidencia;
+    const lbl = document.getElementById('lblDirectorCancelarId');
+    if (lbl) lbl.textContent = `#${idIncidencia}`;
+    if (modalCancelarDirectorInstance) {
+        modalCancelarDirectorInstance.show();
     }
+}
+
+/**
+ * Ejecuta la cancelación de una incidencia con estado 'Pendiente'.
+ * PATCH /incidencias/:id con { id_estado: 4 }.
+ */
+async function ejecutarCancelacionDirector() {
+    if (!idIncidenciaCancelarDirector) return;
+    const idIncidencia = idIncidenciaCancelarDirector;
 
     try {
         const response = await fetch(`${API_BASE_URL}/incidencias/${idIncidencia}`, {
@@ -465,17 +648,23 @@ async function cancelarIncidenciaDirector(idIncidencia) {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.mensaje || 'No se pudo cancelar la incidencia');
+            throw new Error(data.mensaje || 'No fue posible cancelar la incidencia. Por favor, intente nuevamente.');
+        }
+
+        if (modalCancelarDirectorInstance) {
+            modalCancelarDirectorInstance.hide();
         }
 
         mostrarToastDirector(`Incidencia #${idIncidencia} cancelada correctamente.`, 'exito');
 
-        cargarGestionIncidencias();
+        cargarGestionIncidencias(paginaActualGestion);
         cargarDashboard();
 
     } catch (error) {
         console.error('Error cancelando incidencia:', error);
-        mostrarToastDirector(`Error: ${error.message}`, 'error');
+        mostrarToastDirector(error.message, 'error');
+    } finally {
+        idIncidenciaCancelarDirector = null;
     }
 }
 
@@ -493,7 +682,8 @@ async function cargarReportesEstadisticos() {
 
         const data = await response.json();
 
-        document.getElementById('repTotalIncidencias').textContent = data.total_incidencias || 0;
+        const elRepTotal = document.getElementById('repTotalIncidencias');
+        if (elRepTotal) elRepTotal.textContent = data.total_incidencias || 0;
 
         // Distribución por Área
         const contAreas = document.getElementById('repContenidoAreas');
@@ -543,31 +733,84 @@ async function cargarReportesEstadisticos() {
 }
 
 /**
- * Genera y descarga el archivo PDF del reporte estadístico.
+ * Genera y descarga el archivo PDF del reporte oficial de incidencias.
+ * Realiza la petición al backend (/director/reportes/pdf) enviando los filtros en query string y JWT,
+ * convirtiendo el stream binario recibido a Blob para iniciar la descarga automática en el navegador.
  */
-function generarReportePDF() {
-    const elemento = document.getElementById('areaReportePDF');
-    if (!elemento) return;
+async function generarReportePDF() {
+    const btnPDF = document.getElementById('btnGenerarPDF');
+    const textoOriginal = btnPDF ? btnPDF.innerHTML : '<i class="bi bi-file-earmark-pdf me-1"></i> Descargar Reporte PDF';
 
-    mostrarToastDirector('Generando archivo PDF...', 'info');
+    try {
+        if (btnPDF) {
+            btnPDF.disabled = true;
+            btnPDF.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Preparando reporte...';
+        }
 
-    const opciones = {
-        margin:       10,
-        filename:     `Reporte_Estadistico_Concordia_${new Date().toISOString().slice(0,10)}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+        mostrarToastDirector('Preparando reporte PDF...', 'info');
 
-    if (window.html2pdf) {
-        window.html2pdf().set(opciones).from(elemento).save().then(() => {
-            mostrarToastDirector('Reporte PDF descargado exitosamente.', 'exito');
-        }).catch(err => {
-            console.error('Error generando PDF:', err);
-            mostrarToastDirector('Error al generar el PDF.', 'error');
+        // Recuperar valores de los filtros
+        const desde = document.getElementById('filtroReporteDesde')?.value || '';
+        const hasta = document.getElementById('filtroReporteHasta')?.value || '';
+        const id_estado = document.getElementById('filtroReporteEstado')?.value || '';
+        const asignado_a = document.getElementById('filtroReporteTecnico')?.value || '';
+
+        // Construir parámetros de consulta
+        const params = new URLSearchParams();
+        if (desde) params.append('desde', desde);
+        if (hasta) params.append('hasta', hasta);
+        if (id_estado) params.append('id_estado', id_estado);
+        if (asignado_a !== '') params.append('asignado_a', asignado_a);
+
+        const queryString = params.toString();
+        const url = `${API_BASE_URL}/reportes/pdf${queryString ? `?${queryString}` : ''}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${tokenJWT}`
+            }
         });
-    } else {
-        window.print();
+
+        if (!response.ok) {
+            let errorMsg = 'No fue posible generar el reporte PDF. Por favor, intente nuevamente.';
+            try {
+                const errData = await response.json();
+                errorMsg = errData.mensaje || errorMsg;
+            } catch (_) {}
+            throw new Error(errorMsg);
+        }
+
+        // Convertir la respuesta a Blob
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+
+        // Crear elemento <a> temporal para disparar la descarga
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+
+        const fechaHoy = new Date().toISOString().slice(0, 10);
+        a.download = `reporte_incidencias_${fechaHoy}.pdf`;
+
+        document.body.appendChild(a);
+        a.click();
+
+        // Limpiar elemento y URL de objeto
+        setTimeout(() => {
+            window.URL.revokeObjectURL(downloadUrl);
+            a.remove();
+        }, 200);
+
+        mostrarToastDirector('Reporte PDF descargado con éxito.', 'exito');
+    } catch (error) {
+        console.error('Error generando reporte PDF:', error);
+        mostrarToastDirector(error.message || 'Error al descargar el reporte.', 'error');
+    } finally {
+        if (btnPDF) {
+            btnPDF.disabled = false;
+            btnPDF.innerHTML = textoOriginal;
+        }
     }
 }
 

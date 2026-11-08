@@ -5,23 +5,33 @@
  * ============================================================================
  */
 
-import articuloRepository from '../repositories/articuloRepository.js';
+import articuloRepository, { ARTICULOS_SORT_MAP } from '../repositories/articuloRepository.js';
 import categoriaRepository from '../repositories/categoriaRepository.js';
 import areaRepository from '../repositories/areaRepository.js';
 import ROLES from '../utils/roles.js';
+import { parsePagination, parseSort, buildPaginatedResponse } from '../utils/pagination.js';
 
 class ArticuloService {
-  async getArticulos(query, usuario) {
-    const { incluir_inactivos, todos, id_categoria, id_area, buscar } = query;
+  async getArticulos(query = {}, usuario = null) {
+    const { incluir_inactivos, todos, id_categoria, id_area, buscar, search, q } = query;
     const esAdmin = usuario ? usuario.rol !== ROLES.MUNICIPAL : true;
     const traerTodos = esAdmin && (incluir_inactivos === 'true' || incluir_inactivos === '1' || todos === 'true' || todos === '1');
 
-    return await articuloRepository.findAll({
+    const textoBusqueda = buscar || search || q || null;
+    const { page, limit, offset } = parsePagination(query, 10);
+    const { sortSql } = parseSort(query, ARTICULOS_SORT_MAP, 'id_articulo', 'ASC');
+
+    const { rows, total } = await articuloRepository.findAllPaginated({
       traerTodos,
       id_categoria,
       id_area,
-      buscar
+      buscar: textoBusqueda,
+      limit,
+      offset,
+      sortSql
     });
+
+    return buildPaginatedResponse(rows, total, page, limit);
   }
 
   async getArticuloById(id) {

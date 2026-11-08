@@ -123,7 +123,6 @@ export async function enviarCorreo({ para, asunto, html, texto }) {
     });
 
     const esSimulado = Boolean(info.message);
-    console.log(`[EMAIL ENVIADO] Asunto: "${asunto}" | Destinatario: <${para}> | Modo: ${esSimulado ? 'Simulación en consola' : 'SMTP Real'}`);
 
     return {
       exito: true,

@@ -7,11 +7,24 @@
 
 import db from '../config/db.js';
 
-class IncidenciaRepository {
-  async getClient() {
-    return await db.pool.connect();
-  }
+export const INCIDENCIAS_SORT_MAP = {
+  id: 'inc.id_incidencia',
+  id_incidencia: 'inc.id_incidencia',
+  creado: 'inc.creado',
+  fecha: 'inc.creado',
+  prioridad: 'inc.prioridad',
+  id_estado: 'inc.id_estado',
+  estado_descripcion: 'est.descripcion',
+  descripcion_pedido: 'inc.descripcion_pedido',
+  articulo_descripcion: 'art.descripcion',
+  id_articulo: 'inc.id_articulo',
+  creado_por: 'inc.creado_por',
+  asignado_a: 'inc.asignado_a',
+  usuario_creador: "CONCAT(u_crea.nombres, ' ', u_crea.apellidos)",
+  asignado_nombre: "CONCAT(u_asig.nombres, ' ', u_asig.apellidos)"
+};
 
+class IncidenciaRepository {
   async findById(idIncidencia) {
     const queryText = `
       SELECT * FROM public.incidencias WHERE id_incidencia = $1
@@ -55,77 +68,108 @@ class IncidenciaRepository {
     return rows[0] || null;
   }
 
-  async findByUsuarioCreador(idUsuario) {
-    const queryText = `
-      SELECT inc.id_incidencia, inc.id_articulo, inc.id_estado, inc.creado_por, inc.asignado_a,
-              inc.creado, inc.prioridad, inc.descripcion_pedido, inc.descripcion_resolucion,
-              est.descripcion AS estado_descripcion,
-              art.descripcion AS articulo_descripcion,
-              CASE
-                WHEN inc.asignado_a = 0 OR inc.asignado_a IS NULL THEN 'Sin Asignar'
-                ELSE COALESCE(CONCAT(u_asig.nombres, ' ', u_asig.apellidos), 'Sin Asignar')
-              END AS asignado_nombre
-       FROM public.incidencias inc
-       JOIN public.estados est ON inc.id_estado = est.id_estado
-       JOIN public.articulos art ON inc.id_articulo = art.id_articulo
-       LEFT JOIN public.usuarios u_asig ON inc.asignado_a = u_asig.id_usuario
-       WHERE inc.creado_por = $1
-       ORDER BY inc.creado DESC
+  /**
+   * Consulta SQL paginada con LIMIT, OFFSET, conteo total y ordenamiento seguro en base de datos.
+   */
+  async findAllPaginated({
+    creado_por = null,
+    asignado_a = null,
+    id_estado = null,
+    prioridad = null,
+    id_articulo = null,
+    id_area = null,
+    buscar = null,
+    limit = 10,
+    offset = 0,
+    sortSql = 'inc.creado DESC'
+  } = {}) {
+    const fromAndWhere = `
+      FROM public.incidencias inc
+      JOIN public.estados est ON inc.id_estado = est.id_estado
+      JOIN public.articulos art ON inc.id_articulo = art.id_articulo
+      JOIN public.usuarios u_crea ON inc.creado_por = u_crea.id_usuario
+      LEFT JOIN public.usuarios u_asig ON inc.asignado_a = u_asig.id_usuario
+      LEFT JOIN public.areas ar ON u_crea.id_area = ar.id_area
+      WHERE 1=1
     `;
-    const { rows } = await db.query(queryText, [idUsuario]);
-    return rows;
-  }
+    const params = [];
+    let filterClauses = '';
 
-  async findAsignadasATecnico(idUsuario) {
-    const queryText = `
+    if (creado_por !== null && creado_por !== undefined) {
+      params.push(parseInt(creado_por, 10));
+      filterClauses += ` AND inc.creado_por = $${params.length}`;
+    }
+
+    if (asignado_a !== null && asignado_a !== undefined) {
+      params.push(parseInt(asignado_a, 10));
+      filterClauses += ` AND inc.asignado_a = $${params.length}`;
+    }
+
+    if (id_estado !== null && id_estado !== undefined) {
+      params.push(parseInt(id_estado, 10));
+      filterClauses += ` AND inc.id_estado = $${params.length}`;
+    }
+
+    if (prioridad !== null && prioridad !== undefined) {
+      params.push(parseInt(prioridad, 10));
+      filterClauses += ` AND inc.prioridad = $${params.length}`;
+    }
+
+    if (id_articulo !== null && id_articulo !== undefined) {
+      params.push(parseInt(id_articulo, 10));
+      filterClauses += ` AND inc.id_articulo = $${params.length}`;
+    }
+
+    if (id_area !== null && id_area !== undefined) {
+      params.push(parseInt(id_area, 10));
+      filterClauses += ` AND (art.id_area = $${params.length} OR u_crea.id_area = $${params.length})`;
+    }
+
+    if (buscar) {
+      params.push(`%${buscar.trim()}%`);
+      const pIdx = params.length;
+      filterClauses += ` AND (
+        inc.descripcion_pedido ILIKE $${pIdx} OR
+        art.descripcion ILIKE $${pIdx} OR
+        u_crea.nombres ILIKE $${pIdx} OR
+        u_crea.apellidos ILIKE $${pIdx} OR
+        est.descripcion ILIKE $${pIdx}
+      )`;
+    }
+
+    // 1. Conteo total de registros con los filtros aplicados (sin LIMIT ni OFFSET)
+    const countSql = `SELECT COUNT(*)::int AS total ${fromAndWhere} ${filterClauses}`;
+    const countResult = await db.query(countSql, params);
+    const total = countResult.rows[0]?.total || 0;
+
+    // 2. Consulta de registros con ordenamiento y paginación LIMIT / OFFSET
+    const dataParams = [...params];
+    dataParams.push(limit);
+    const limitPlaceholder = `$${dataParams.length}`;
+    dataParams.push(offset);
+    const offsetPlaceholder = `$${dataParams.length}`;
+
+    const dataSql = `
       SELECT inc.id_incidencia, inc.id_articulo, inc.id_estado, inc.creado_por, inc.asignado_a,
              inc.creado, inc.prioridad, inc.descripcion_pedido, inc.descripcion_resolucion,
              est.descripcion AS estado_descripcion,
              art.descripcion AS articulo_descripcion,
              CONCAT(u_crea.nombres, ' ', u_crea.apellidos) AS usuario_creador,
              u_crea.usuario AS usuario_creador_email,
-             COALESCE(ar.descripcion, 'Área Municipal') AS area_solicitante
-      FROM public.incidencias inc
-      JOIN public.estados est ON inc.id_estado = est.id_estado
-      JOIN public.articulos art ON inc.id_articulo = art.id_articulo
-      JOIN public.usuarios u_crea ON inc.creado_por = u_crea.id_usuario
-      LEFT JOIN public.areas ar ON u_crea.id_area = ar.id_area
-      WHERE inc.asignado_a = $1
-      ORDER BY
-        CASE
-          WHEN inc.id_estado = 1 THEN 1
-          WHEN inc.id_estado = 2 THEN 2
-          WHEN inc.id_estado = 3 THEN 3
-          ELSE 4
-        END,
-        inc.prioridad ASC,
-        inc.creado DESC
-    `;
-    const { rows } = await db.query(queryText, [idUsuario]);
-    return rows;
-  }
-
-  async findAll() {
-    const queryText = `
-      SELECT inc.id_incidencia, inc.id_articulo, inc.id_estado, inc.prioridad, inc.creado,
-             inc.descripcion_pedido, inc.asignado_a,
-             est.descripcion AS estado_descripcion,
-             art.descripcion AS articulo_descripcion,
-             CONCAT(u_crea.nombres, ' ', u_crea.apellidos) AS usuario_creador,
+             COALESCE(ar.descripcion, 'Área Municipal') AS area_solicitante,
              CASE
                WHEN inc.asignado_a = 0 OR inc.asignado_a IS NULL THEN 'Sin Asignar'
                ELSE COALESCE(CONCAT(u_asig.nombres, ' ', u_asig.apellidos), 'Sin Asignar')
              END AS asignado_nombre
-      FROM public.incidencias inc
-      JOIN public.estados est ON inc.id_estado = est.id_estado
-      JOIN public.articulos art ON inc.id_articulo = art.id_articulo
-      JOIN public.usuarios u_crea ON inc.creado_por = u_crea.id_usuario
-      LEFT JOIN public.usuarios u_asig ON inc.asignado_a = u_asig.id_usuario
-      ORDER BY inc.creado DESC
+      ${fromAndWhere} ${filterClauses}
+      ORDER BY ${sortSql}
+      LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}
     `;
-    const { rows } = await db.query(queryText);
-    return rows;
+
+    const { rows } = await db.query(dataSql, dataParams);
+    return { rows, total };
   }
+
   async findByIdForUpdate(idIncidencia, executor = db) {
     const { rows } = await executor.query(
       'SELECT * FROM public.incidencias WHERE id_incidencia = $1 FOR UPDATE',
@@ -155,18 +199,6 @@ class IncidenciaRepository {
         RETURNING *`,
       [descripcionResolucion, idIncidencia]
     );
-    return rows[0] || null;
-  }
-  
-  async updateEstadoAndResolucion(idIncidencia, idEstado, descripcionResolucion) {
-    const updateQuery = `
-      UPDATE public.incidencias
-      SET id_estado = $1,
-          descripcion_resolucion = $2
-      WHERE id_incidencia = $3
-      RETURNING *
-    `;
-    const { rows } = await db.query(updateQuery, [idEstado, descripcionResolucion, idIncidencia]);
     return rows[0] || null;
   }
 
@@ -219,8 +251,9 @@ class IncidenciaRepository {
       JOIN public.articulos art ON inc.id_articulo = art.id_articulo
       JOIN public.usuarios u_crea ON inc.creado_por = u_crea.id_usuario
       LEFT JOIN public.usuarios u_asig ON inc.asignado_a = u_asig.id_usuario
-      WHERE inc.prioridad = 1
+      WHERE inc.prioridad = 1 AND inc.id_estado IN (1, 2)
       ORDER BY inc.creado DESC
+      LIMIT 5
     `;
     const priorityResult = await db.query(priorityQuery);
 
@@ -258,6 +291,65 @@ class IncidenciaRepository {
       por_area: areaResult.rows,
       por_categoria: catResult.rows
     };
+  }
+
+  /**
+   * Consulta las incidencias filtradas por rango de fechas, estado y técnico asignado
+   * para la generación de reportes oficiales en PDF.
+   * Utiliza consultas parametrizadas ($1, $2, ...) con joins a artículos, estados y usuarios.
+   */
+  async getReporteIncidencias({ desde, hasta, id_estado, asignado_a } = {}) {
+    let sql = `
+      SELECT inc.id_incidencia, inc.creado, inc.prioridad, inc.descripcion_pedido,
+             est.id_estado, est.descripcion AS estado_descripcion,
+             art.id_articulo, art.descripcion AS articulo_descripcion,
+             inc.asignado_a,
+             CASE
+               WHEN inc.asignado_a = 0 OR inc.asignado_a IS NULL THEN 'Sin Asignar'
+               ELSE COALESCE(CONCAT(u_asig.nombres, ' ', u_asig.apellidos), 'Sin Asignar')
+             END AS asignado_nombre
+      FROM public.incidencias inc
+      JOIN public.estados est ON inc.id_estado = est.id_estado
+      JOIN public.articulos art ON inc.id_articulo = art.id_articulo
+      LEFT JOIN public.usuarios u_asig ON inc.asignado_a = u_asig.id_usuario
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (desde && String(desde).trim()) {
+      params.push(`${String(desde).trim()}T00:00:00.000Z`);
+      sql += ` AND inc.creado >= $${params.length}::timestamptz`;
+    }
+
+    if (hasta && String(hasta).trim()) {
+      params.push(`${String(hasta).trim()}T23:59:59.999Z`);
+      sql += ` AND inc.creado <= $${params.length}::timestamptz`;
+    }
+
+    if (id_estado !== undefined && id_estado !== null && String(id_estado).trim() !== '') {
+      const parsedEstado = parseInt(id_estado, 10);
+      if (!isNaN(parsedEstado) && parsedEstado > 0) {
+        params.push(parsedEstado);
+        sql += ` AND inc.id_estado = $${params.length}`;
+      }
+    }
+
+    if (asignado_a !== undefined && asignado_a !== null && String(asignado_a).trim() !== '') {
+      const parsedAsignado = parseInt(asignado_a, 10);
+      if (!isNaN(parsedAsignado)) {
+        if (parsedAsignado === 0) {
+          sql += ` AND (inc.asignado_a = 0 OR inc.asignado_a IS NULL)`;
+        } else {
+          params.push(parsedAsignado);
+          sql += ` AND inc.asignado_a = $${params.length}`;
+        }
+      }
+    }
+
+    sql += ` ORDER BY inc.creado DESC, inc.id_incidencia DESC`;
+
+    const { rows } = await db.query(sql, params);
+    return rows;
   }
 }
 

@@ -22,22 +22,92 @@ const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
  * /api/v1/incidencias:
  *   get:
  *     tags: [Incidencias]
- *     summary: Listar incidencias según el rol del usuario autenticado
+ *     summary: Listar incidencias según el rol del usuario autenticado con paginación, orden y filtros en base de datos
  *     description: >
  *       Municipal: las incidencias que creó.
  *       Sistemas: las incidencias asignadas a su cargo.
- *       Director: todas las incidencias.
+ *       Director: todas las incidencias con posibilidad de filtrar por técnico o creador.
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página actual
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Cantidad de incidencias por página
+ *       - in: query
+ *         name: order_by
+ *         schema:
+ *           type: string
+ *           enum: [id_incidencia, creado, prioridad, id_estado, descripcion_pedido, articulo_descripcion]
+ *           default: creado
+ *         description: Columna de ordenamiento validada
+ *       - in: query
+ *         name: order_dir
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *           default: DESC
+ *         description: Dirección de ordenamiento
+ *       - in: query
+ *         name: id_estado
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por estado (1 Pendiente, 2 En Proceso, 3 Resuelta, 4 Cancelada)
+ *       - in: query
+ *         name: prioridad
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por prioridad (1 Alta, 2 Media, 3 Baja)
+ *       - in: query
+ *         name: id_articulo
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por artículo
+ *       - in: query
+ *         name: id_area
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por área
+ *       - in: query
+ *         name: buscar
+ *         schema:
+ *           type: string
+ *         description: Búsqueda de texto en pedido, artículo, solicitante o estado
  *     responses:
  *       200:
- *         description: Lista de incidencias
+ *         description: Lista paginada de incidencias con metadata de paginación
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Incidencia'
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Incidencia'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total_pages:
+ *                       type: integer
+ *                     has_next:
+ *                       type: boolean
+ *                     has_prev:
+ *                       type: boolean
  *       401:
  *         $ref: '#/components/responses/NoAutenticado'
  *       403:
@@ -172,6 +242,8 @@ const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
 
 // Listar incidencias (el resultado depende del rol del token)
 router.get('/', verificarEmpleado, incidenciaController.listar);
+router.get('/mis-incidencias', verificarEmpleado, incidenciaController.listarMisIncidencias);
+router.get('/asignadas', verificarEmpleado, incidenciaController.listarAsignadas);
 
 // Crear una incidencia (solo Empleado Municipal)
 router.post('/', verificarSoloMunicipal, validarCrearIncidencia, incidenciaController.crear);

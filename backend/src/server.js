@@ -46,7 +46,8 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servidor de archivos estáticos (Frontend Web empaquetado o desarrollo)
+// Servidor de archivos estáticos (Frontend Web empaquetado o desarrollo y recursos subidos)
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
 app.use(express.static(path.join(__dirname, '../../frontend')));
 

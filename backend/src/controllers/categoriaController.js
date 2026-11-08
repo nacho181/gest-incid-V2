@@ -29,7 +29,7 @@ class CategoriaController {
 
   async eliminarCategoria(req, res) {
     const categoria = await categoriaService.eliminarCategoria(req.params.id);
-    res.status(200).json({ mensaje: 'Categoría dada de baja correctamente (borrado lógico)', categoria });
+    res.status(200).json({ mensaje: 'Categoría dada de baja correctamente', categoria });
   }
 
   async reactivarCategoria(req, res) {

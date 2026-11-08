@@ -47,6 +47,18 @@ let categoriasCache = [];
 let articulosCache = [];
 let areasCache = [];
 
+// Paginación de Categorías
+let paginaActualCategorias = 1;
+const limiteCategorias = 10;
+let totalRegistrosCategorias = 0;
+let totalPaginasCategorias = 1;
+
+// Paginación de Artículos
+let paginaActualArticulos = 1;
+const limiteArticulos = 10;
+let totalRegistrosArticulos = 0;
+let totalPaginasArticulos = 1;
+
 // Instancias de Modales y Toast
 let bsToast = null;
 let modalCatForm = null;
@@ -149,9 +161,10 @@ function setupEventListeners() {
     // Categorías: Formulario submit
     document.getElementById('formCategoria')?.addEventListener('submit', guardarCategoria);
     // Categorías: Refrescar
-    document.getElementById('btnRefrescarCategorias')?.addEventListener('click', () => {
+    document.getElementById('btnRefrescarCategorias')?.addEventListener('click', (e) => {
+        e.currentTarget?.blur();
         cargarCategorias();
-        mostrarToast('Categorías actualizadas', 'info');
+        mostrarToast('Catálogo de categorías actualizado.', 'info');
     });
     // Categorías: Filtro checkbox inactivos
     document.getElementById('chkInactivosCategorias')?.addEventListener('change', cargarCategorias);
@@ -163,9 +176,10 @@ function setupEventListeners() {
     // Artículos: Formulario submit
     document.getElementById('formArticulo')?.addEventListener('submit', guardarArticulo);
     // Artículos: Refrescar
-    document.getElementById('btnRefrescarArticulos')?.addEventListener('click', () => {
+    document.getElementById('btnRefrescarArticulos')?.addEventListener('click', (e) => {
+        e.currentTarget?.blur();
         cargarArticulos();
-        mostrarToast('Artículos actualizados', 'info');
+        mostrarToast('Catálogo de artículos actualizado.', 'info');
     });
     // Artículos: Filtro checkbox inactivos
     document.getElementById('chkInactivosArticulos')?.addEventListener('change', cargarArticulos);
@@ -227,25 +241,53 @@ function setupEventListeners() {
 }
 
 // ============================================================================
-// BREAD DE CATEGORÍAS
+// GESTIÓN DE CATEGORÍAS
 // ============================================================================
 
 /**
- * BROWSE: Carga el listado de categorías desde la API.
+ * BROWSE: Carga el listado de categorías desde la API con paginación LIMIT/OFFSET.
  */
-async function cargarCategorias() {
+async function cargarCategorias(pagina = 1) {
+    paginaActualCategorias = pagina;
     const tbody = document.getElementById('tbodyCategorias');
     const chkInactivos = document.getElementById('chkInactivosCategorias');
     const incluirInactivos = chkInactivos ? chkInactivos.checked : false;
+    const buscar = (document.getElementById('txtBuscarCategoria')?.value || '').trim();
 
     try {
-        const url = `${API_BASE_URL}/categorias${incluirInactivos ? '?incluir_inactivos=true' : ''}`;
+        let url = `${API_BASE_URL}/categorias?page=${pagina}&limit=${limiteCategorias}`;
+        if (incluirInactivos) url += '&incluir_inactivos=true';
+        if (buscar) url += `&buscar=${encodeURIComponent(buscar)}`;
+
         const response = await authFetch(url);
         if (!response.ok) throw new Error('Error al consultar categorías');
 
-        categoriasCache = await response.json();
+        const rawData = await response.json();
+        categoriasCache = Array.isArray(rawData) ? rawData : (rawData.data || []);
+        const pagination = rawData.pagination || {
+            total: categoriasCache.length,
+            page: pagina,
+            limit: limiteCategorias,
+            total_pages: Math.ceil(categoriasCache.length / limiteCategorias) || 1
+        };
+
+        totalRegistrosCategorias = pagination.total;
+        totalPaginasCategorias = pagination.total_pages || 1;
+
         renderizarTablaCategorias(categoriasCache);
         poblarSelectsCategorias();
+
+        renderizarPaginador({
+            ulElement: document.getElementById('paginacionCategorias'),
+            infoElement: document.getElementById('lblInfoPaginacionCategorias'),
+            total: totalRegistrosCategorias,
+            page: paginaActualCategorias,
+            limit: limiteCategorias,
+            totalPages: totalPaginasCategorias,
+            onCambiarPagina: (p) => cargarCategorias(p),
+            singular: 'categoría',
+            plural: 'categorías'
+        });
     } catch (error) {
         console.error('Error cargando categorías:', error);
         tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Error al cargar categorías: ${escapeHtml(error.message)}</td></tr>`;
@@ -267,43 +309,48 @@ function renderizarTablaCategorias(lista) {
     tbody.innerHTML = lista.map(c => {
         const esActivo = c.activo === 1;
         const badgeEstado = esActivo
-            ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle me-1"></i>Activa</span>`
-            : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1"><i class="bi bi-x-circle me-1"></i>Inactiva (Baja)</span>`;
+            ? `<span class="badge badge-activo rounded-pill fw-semibold px-2 py-1"><i class="bi bi-check-circle me-1"></i>Activa</span>`
+            : `<span class="badge badge-inactivo rounded-pill fw-semibold px-2 py-1"><i class="bi bi-slash-circle me-1"></i>Inactiva</span>`;
 
         return `
             <tr class="${!esActivo ? 'table-light opacity-75' : ''}">
-                <td class="fw-bold text-muted">#${c.id_categoria}</td>
-                <td class="fw-semibold text-dark">${escapeHtml(c.descripcion)}</td>
-                <td>${badgeEstado}</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-info me-1" data-action="ver-detalle" data-id="${c.id_categoria}" title="Ver Detalle (Read)">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary me-1" data-action="editar" data-id="${c.id_categoria}" title="Editar (Edit)">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    ${esActivo ? `
-                        <button class="btn btn-sm btn-outline-danger" data-action="baja-logica" data-id="${c.id_categoria}" data-nombre="${escapeHtml(c.descripcion)}" title="Baja Lógica (Soft Delete)">
-                            <i class="bi bi-trash3"></i>
+                <td class="align-middle fw-bold text-muted text-start">#${c.id_categoria}</td>
+                <td class="align-middle fw-semibold text-dark text-start">${escapeHtml(c.descripcion)}</td>
+                <td class="align-middle text-center">${badgeEstado}</td>
+                <td class="align-middle text-end">
+                    <div class="d-inline-flex gap-1 align-items-center justify-content-end table-actions-group">
+                        <button class="btn btn-sm btn-outline-secondary rounded-2" data-action="ver-detalle" data-id="${c.id_categoria}" title="Ver detalle" aria-label="Ver detalle">
+                            <i class="bi bi-eye"></i>
                         </button>
-                    ` : `
-                        <button class="btn btn-sm btn-outline-success" data-action="reactivar" data-id="${c.id_categoria}" title="Reactivar">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar
+                        <button class="btn btn-sm btn-outline-concordia rounded-2" data-action="editar" data-id="${c.id_categoria}" title="Editar categoría" aria-label="Editar categoría">
+                            <i class="bi bi-pencil"></i>
                         </button>
-                    `}
+                        ${esActivo ? `
+                            <button class="btn btn-sm btn-outline-danger rounded-2" data-action="baja-logica" data-id="${c.id_categoria}" data-nombre="${escapeHtml(c.descripcion)}" title="Dar de baja" aria-label="Dar de baja">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        ` : `
+                            <button class="btn btn-sm btn-outline-concordia rounded-2" data-action="reactivar" data-id="${c.id_categoria}" title="Reactivar categoría" aria-label="Reactivar categoría">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar
+                            </button>
+                        `}
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
 }
 
+let debounceTimerCat = null;
 /**
- * Filtra el listado de categorías reactivamente.
+ * Filtra el listado de categorías mediante consulta paginada en base de datos.
  */
 function filtrarCategorias() {
-    const q = (document.getElementById('txtBuscarCategoria')?.value || '').toLowerCase().trim();
-    const filtradas = categoriasCache.filter(c => c.descripcion.toLowerCase().includes(q));
-    renderizarTablaCategorias(filtradas);
+    clearTimeout(debounceTimerCat);
+    debounceTimerCat = setTimeout(() => {
+        paginaActualCategorias = 1;
+        cargarCategorias(1);
+    }, 250);
 }
 
 /**
@@ -318,8 +365,8 @@ async function verDetalleCategoria(id) {
         document.getElementById('detCatId').textContent = `#${cat.id_categoria}`;
         document.getElementById('detCatDescripcion').textContent = cat.descripcion;
         document.getElementById('detCatEstado').innerHTML = cat.activo === 1
-            ? `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activa (activo = 1)</span>`
-            : `<span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>Inactiva / Baja Lógica (activo = 0)</span>`;
+            ? `<span class="badge badge-activo rounded-pill fw-semibold px-2 py-1"><i class="bi bi-check-circle me-1"></i>Activa</span>`
+            : `<span class="badge badge-inactivo rounded-pill fw-semibold px-2 py-1"><i class="bi bi-slash-circle me-1"></i>Inactiva</span>`;
 
         if (modalCatDetalle) modalCatDetalle.show();
     } catch (e) {
@@ -369,7 +416,7 @@ async function guardarCategoria(e) {
     const activo = document.getElementById('selectCatActivo').value;
 
     if (!descripcion) {
-        mostrarToast('Por favor ingrese la descripción de la categoría', 'error');
+        mostrarToast('Por favor, ingrese el nombre de la categoría.', 'error');
         return;
     }
 
@@ -386,18 +433,18 @@ async function guardarCategoria(e) {
             body: JSON.stringify(bodyData)
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.mensaje || 'Error al guardar la categoría');
+        if (!res.ok) throw new Error(data.mensaje || 'No fue posible guardar la categoría. Por favor, intente nuevamente.');
 
-        mostrarToast(esEdicion ? 'Categoría actualizada exitosamente' : 'Categoría creada exitosamente', 'exito');
+        mostrarToast(esEdicion ? 'Categoría actualizada exitosamente.' : 'Categoría creada exitosamente.', 'exito');
         if (modalCatForm) modalCatForm.hide();
-        await cargarCategorias();
+        await cargarCategorias(esEdicion ? paginaActualCategorias : 1);
     } catch (err) {
         mostrarToast(err.message, 'error');
     }
 }
 
 /**
- * REACTIVAR: Reactiva una categoría que estaba en baja lógica.
+ * REACTIVAR: Reactiva una categoría que estaba desactivada.
  */
 async function reactivarCategoria(id) {
     try {
@@ -407,17 +454,17 @@ async function reactivarCategoria(id) {
         body: JSON.stringify({ activo: 1 })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.mensaje || 'Error al reactivar categoría');
+        if (!res.ok) throw new Error(data.mensaje || 'No fue posible reactivar la categoría.');
 
-        mostrarToast('Categoría reactivada exitosamente', 'exito');
-        await cargarCategorias();
+        mostrarToast('Categoría reactivada exitosamente.', 'exito');
+        await cargarCategorias(paginaActualCategorias);
     } catch (err) {
         mostrarToast(err.message, 'error');
     }
 }
 
 // ============================================================================
-// BREAD DE ARTÍCULOS
+// GESTIÓN DE ARTÍCULOS
 // ============================================================================
 
 /**
@@ -427,28 +474,61 @@ async function cargarAreas() {
     try {
         const res = await authFetch(`${API_BASE_URL}/areas`);
         if (!res.ok) throw new Error('Error al consultar áreas');
-        areasCache = await res.json();
+        const rawAreas = await res.json();
+        areasCache = Array.isArray(rawAreas) ? rawAreas : (rawAreas.data || []);
         poblarSelectsAreas();
-    } catch (e) {
-        console.warn('Error al cargar áreas:', e);
+    } catch (_) {
+        // Silencioso en carga inicial de áreas
     }
 }
 
 /**
- * BROWSE: Carga el listado de artículos desde la API.
+ * BROWSE: Carga el listado de artículos desde la API con paginación LIMIT/OFFSET.
  */
-async function cargarArticulos() {
+async function cargarArticulos(pagina = 1) {
+    paginaActualArticulos = pagina;
     const tbody = document.getElementById('tbodyArticulos');
     const chkInactivos = document.getElementById('chkInactivosArticulos');
     const incluirInactivos = chkInactivos ? chkInactivos.checked : false;
+    const buscar = (document.getElementById('txtBuscarArticulo')?.value || '').trim();
+    const filtroCat = document.getElementById('filtroCategoriaArticulo')?.value;
+    const filtroArea = document.getElementById('filtroAreaArticulo')?.value;
 
     try {
-        const url = `${API_BASE_URL}/articulos${incluirInactivos ? '?incluir_inactivos=true' : ''}`;
+        let url = `${API_BASE_URL}/articulos?page=${pagina}&limit=${limiteArticulos}`;
+        if (incluirInactivos) url += '&incluir_inactivos=true';
+        if (buscar) url += `&buscar=${encodeURIComponent(buscar)}`;
+        if (filtroCat) url += `&id_categoria=${encodeURIComponent(filtroCat)}`;
+        if (filtroArea) url += `&id_area=${encodeURIComponent(filtroArea)}`;
+
         const response = await authFetch(url);
         if (!response.ok) throw new Error('Error al consultar artículos');
 
-        articulosCache = await response.json();
+        const rawArt = await response.json();
+        articulosCache = Array.isArray(rawArt) ? rawArt : (rawArt.data || []);
+        const pagination = rawArt.pagination || {
+            total: articulosCache.length,
+            page: pagina,
+            limit: limiteArticulos,
+            total_pages: Math.ceil(articulosCache.length / limiteArticulos) || 1
+        };
+
+        totalRegistrosArticulos = pagination.total;
+        totalPaginasArticulos = pagination.total_pages || 1;
+
         renderizarTablaArticulos(articulosCache);
+
+        renderizarPaginador({
+            ulElement: document.getElementById('paginacionArticulos'),
+            infoElement: document.getElementById('lblInfoPaginacionArticulos'),
+            total: totalRegistrosArticulos,
+            page: paginaActualArticulos,
+            limit: limiteArticulos,
+            totalPages: totalPaginasArticulos,
+            onCambiarPagina: (p) => cargarArticulos(p),
+            singular: 'artículo',
+            plural: 'artículos'
+        });
     } catch (error) {
         console.error('Error cargando artículos:', error);
         tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error al cargar artículos: ${escapeHtml(error.message)}</td></tr>`;
@@ -470,63 +550,58 @@ function renderizarTablaArticulos(lista) {
     tbody.innerHTML = lista.map(a => {
         const esActivo = a.activo === 1;
         const badgeEstado = esActivo
-            ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle me-1"></i>Activo</span>`
-            : `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1"><i class="bi bi-x-circle me-1"></i>Inactivo (Baja)</span>`;
+            ? `<span class="badge badge-activo rounded-pill fw-semibold px-2 py-1"><i class="bi bi-check-circle me-1"></i>Activo</span>`
+            : `<span class="badge badge-inactivo rounded-pill fw-semibold px-2 py-1"><i class="bi bi-slash-circle me-1"></i>Inactivo</span>`;
 
         return `
             <tr class="${!esActivo ? 'table-light opacity-75' : ''}">
-                <td class="fw-bold text-muted">#${a.id_articulo}</td>
-                <td class="fw-semibold text-dark">${escapeHtml(a.descripcion)}</td>
-                <td><span class="badge bg-concordia-light text-white">${escapeHtml(a.categoria_descripcion || 'Sin categoría')}</span></td>
-                <td><span class="badge bg-light text-dark border">${escapeHtml(a.area_descripcion || 'Sin área')}</span></td>
-                <td>${badgeEstado}</td>
-                <td class="text-end">
-                    <button class="btn btn-sm btn-outline-info me-1" data-action="ver-detalle" data-id="${a.id_articulo}" title="Ver Detalle (Read)">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-primary me-1" data-action="editar" data-id="${a.id_articulo}" title="Editar (Edit)">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    ${esActivo ? `
-                        <button class="btn btn-sm btn-outline-danger" data-action="baja-logica" data-id="${a.id_articulo}" data-nombre="${escapeHtml(a.descripcion)}" title="Baja Lógica (Soft Delete)">
-                            <i class="bi bi-trash3"></i>
+                <td class="align-middle fw-bold text-muted text-start">#${a.id_articulo}</td>
+                <td class="align-middle fw-semibold text-dark text-start">${escapeHtml(a.descripcion)}</td>
+                <td class="align-middle text-start text-nowrap">
+                    <span class="badge rounded-pill bg-light text-dark border fw-medium px-2 py-1 text-truncate d-inline-block align-middle" style="max-width: 170px;" title="${escapeHtml(a.categoria_descripcion || 'Sin categoría')}">
+                        ${escapeHtml(a.categoria_descripcion || 'Sin categoría')}
+                    </span>
+                </td>
+                <td class="align-middle text-start text-nowrap">
+                    <span class="badge rounded-pill bg-light text-muted border fw-normal px-2 py-1 text-truncate d-inline-block align-middle" style="max-width: 190px;" title="${escapeHtml(a.area_descripcion || 'Sin área')}">
+                        <i class="bi bi-geo-alt me-1 text-secondary"></i>${escapeHtml(a.area_descripcion || 'Sin área')}
+                    </span>
+                </td>
+                <td class="align-middle text-center text-nowrap">${badgeEstado}</td>
+                <td class="align-middle text-end text-nowrap">
+                    <div class="d-inline-flex gap-1 align-items-center justify-content-end table-actions-group">
+                        <button class="btn btn-sm btn-outline-secondary rounded-2" data-action="ver-detalle" data-id="${a.id_articulo}" title="Ver detalle" aria-label="Ver detalle">
+                            <i class="bi bi-eye"></i>
                         </button>
-                    ` : `
-                        <button class="btn btn-sm btn-outline-success" data-action="reactivar" data-id="${a.id_articulo}" title="Reactivar">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar
+                        <button class="btn btn-sm btn-outline-concordia rounded-2" data-action="editar" data-id="${a.id_articulo}" title="Editar artículo" aria-label="Editar artículo">
+                            <i class="bi bi-pencil"></i>
                         </button>
-                    `}
+                        ${esActivo ? `
+                            <button class="btn btn-sm btn-outline-danger rounded-2" data-action="baja-logica" data-id="${a.id_articulo}" data-nombre="${escapeHtml(a.descripcion)}" title="Dar de baja" aria-label="Dar de baja">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        ` : `
+                            <button class="btn btn-sm btn-outline-concordia rounded-2" data-action="reactivar" data-id="${a.id_articulo}" title="Reactivar artículo" aria-label="Reactivar artículo">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Reactivar
+                            </button>
+                        `}
+                    </div>
                 </td>
             </tr>
         `;
     }).join('');
 }
 
+let debounceTimerArt = null;
 /**
- * Filtra el listado de artículos por texto, categoría y área reactivamente.
+ * Filtra el listado de artículos por texto, categoría y área en base de datos.
  */
 function filtrarArticulos() {
-    const q = (document.getElementById('txtBuscarArticulo')?.value || '').toLowerCase().trim();
-    const filtroCat = document.getElementById('filtroCategoriaArticulo')?.value;
-    const filtroArea = document.getElementById('filtroAreaArticulo')?.value;
-
-    let filtrados = [...articulosCache];
-
-    if (filtroCat) {
-        filtrados = filtrados.filter(a => a.id_categoria === parseInt(filtroCat, 10));
-    }
-    if (filtroArea) {
-        filtrados = filtrados.filter(a => a.id_area === parseInt(filtroArea, 10));
-    }
-    if (q) {
-        filtrados = filtrados.filter(a =>
-            a.descripcion.toLowerCase().includes(q) ||
-            (a.categoria_descripcion && a.categoria_descripcion.toLowerCase().includes(q)) ||
-            (a.area_descripcion && a.area_descripcion.toLowerCase().includes(q))
-        );
-    }
-
-    renderizarTablaArticulos(filtrados);
+    clearTimeout(debounceTimerArt);
+    debounceTimerArt = setTimeout(() => {
+        paginaActualArticulos = 1;
+        cargarArticulos(1);
+    }, 250);
 }
 
 /**
@@ -543,8 +618,8 @@ async function verDetalleArticulo(id) {
         document.getElementById('detArtCategoria').textContent = art.categoria_descripcion || `Categoría #${art.id_categoria}`;
         document.getElementById('detArtArea').textContent = art.area_descripcion || `Área #${art.id_area}`;
         document.getElementById('detArtEstado').innerHTML = art.activo === 1
-            ? `<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activo (activo = 1)</span>`
-            : `<span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>Inactivo / Baja Lógica (activo = 0)</span>`;
+            ? `<span class="badge badge-activo rounded-pill fw-semibold px-2 py-1"><i class="bi bi-check-circle me-1"></i>Activo</span>`
+            : `<span class="badge badge-inactivo rounded-pill fw-semibold px-2 py-1"><i class="bi bi-slash-circle me-1"></i>Inactivo</span>`;
 
         if (modalArtDetalle) modalArtDetalle.show();
     } catch (e) {
@@ -600,7 +675,7 @@ async function guardarArticulo(e) {
     const activo = document.getElementById('selectArtActivo').value;
 
     if (!descripcion || !id_categoria || !id_area) {
-        mostrarToast('Por favor complete todos los campos obligatorios', 'error');
+        mostrarToast('Por favor, complete todos los campos obligatorios.', 'error');
         return;
     }
 
@@ -621,42 +696,42 @@ async function guardarArticulo(e) {
             body: JSON.stringify(bodyData)
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.mensaje || 'Error al guardar el artículo');
+        if (!res.ok) throw new Error(data.mensaje || 'No fue posible guardar el artículo. Por favor, intente nuevamente.');
 
-        mostrarToast(esEdicion ? 'Artículo actualizado exitosamente' : 'Artículo creado exitosamente', 'exito');
+        mostrarToast(esEdicion ? 'Artículo actualizado exitosamente.' : 'Artículo registrado exitosamente.', 'exito');
         if (modalArtForm) modalArtForm.hide();
-        await cargarArticulos();
+        await cargarArticulos(esEdicion ? paginaActualArticulos : 1);
     } catch (err) {
         mostrarToast(err.message, 'error');
     }
 }
 
 /**
- * REACTIVAR: Reactiva un artículo en baja lógica.
+ * REACTIVAR: Reactiva un artículo desactivado.
  */
 async function reactivarArticulo(id) {
     try {
-        const res = await authFetch(`${API_BASE_URL}/categorias/${id}`, {
+        const res = await authFetch(`${API_BASE_URL}/articulos/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ activo: 1 })
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.mensaje || 'Error al reactivar artículo');
+        if (!res.ok) throw new Error(data.mensaje || 'No fue posible reactivar el artículo.');
 
-        mostrarToast('Artículo reactivado exitosamente', 'exito');
-        await cargarArticulos();
+        mostrarToast('Artículo reactivado exitosamente.', 'exito');
+        await cargarArticulos(paginaActualArticulos);
     } catch (err) {
         mostrarToast(err.message, 'error');
     }
 }
 
 // ============================================================================
-// BORRADO LÓGICO (SOFT DELETE) - CONFIRMACIÓN Y EJECUCIÓN
+// DESACTIVACIÓN DE REGISTROS - CONFIRMACIÓN Y EJECUCIÓN
 // ============================================================================
 
 /**
- * DELETE: Abre el modal de confirmación explicando el Soft Delete.
+ * DELETE: Abre el modal de confirmación para desactivar el registro.
  */
 function confirmarBajaLogica(tipo, id, nombre) {
     itemABorrar = { tipo, id, nombre };
@@ -668,7 +743,7 @@ function confirmarBajaLogica(tipo, id, nombre) {
 }
 
 /**
- * Ejecuta el DELETE (Soft Delete en API) sin borrado físico.
+ * Ejecuta la desactivación del registro en el sistema.
  */
 async function ejecutarBorradoLogico() {
     if (!itemABorrar) return;
@@ -679,19 +754,19 @@ async function ejecutarBorradoLogico() {
     try {
         const res = await authFetch(url, { method: 'DELETE' });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.mensaje || 'Error al dar de baja el registro');
+        if (!res.ok) throw new Error(data.mensaje || 'No fue posible desactivar el registro.');
 
         mostrarToast(
-            `${tipo === 'categoria' ? 'Categoría' : 'Artículo'} dado de baja correctamente (Soft delete activo=0)`,
+            `${tipo === 'categoria' ? 'Categoría dada de baja' : 'Artículo dado de baja'} correctamente.`,
             'exito'
         );
 
         if (modalConfirmDelete) modalConfirmDelete.hide();
 
         if (tipo === 'categoria') {
-            await cargarCategorias();
+            await cargarCategorias(paginaActualCategorias);
         } else {
-            await cargarArticulos();
+            await cargarArticulos(paginaActualArticulos);
         }
     } catch (err) {
         mostrarToast(err.message, 'error');
@@ -772,4 +847,92 @@ function escapeHtml(texto) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+/**
+ * Renderiza el componente de paginación Bootstrap 5 y actualiza la leyenda.
+ */
+function renderizarPaginador({ ulElement, infoElement, total, page, limit, totalPages, onCambiarPagina, singular = 'registro', plural = 'registros' }) {
+    if (!ulElement) return;
+    ulElement.innerHTML = '';
+
+    const totalNum = parseInt(total, 10) || 0;
+    const pagActual = parseInt(page, 10) || 1;
+    const cantPaginas = parseInt(totalPages, 10) || 1;
+
+    if (infoElement) {
+        if (totalNum === 0) {
+            infoElement.textContent = `No se encontraron ${plural}`;
+        } else {
+            const desde = (pagActual - 1) * limit + 1;
+            const hasta = Math.min(pagActual * limit, totalNum);
+            infoElement.textContent = `Mostrando ${desde} a ${hasta} de ${totalNum} ${totalNum === 1 ? singular : plural}`;
+        }
+    }
+
+    if (cantPaginas <= 1) return;
+
+    // Botón Anterior
+    const liPrev = document.createElement('li');
+    liPrev.className = `page-item ${pagActual <= 1 ? 'disabled' : ''}`;
+    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">&laquo;</button>`;
+    if (pagActual > 1) {
+        liPrev.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual - 1));
+    }
+    ulElement.appendChild(liPrev);
+
+    let inicio = Math.max(1, pagActual - 2);
+    let fin = Math.min(cantPaginas, inicio + 4);
+    if (fin - inicio < 4) {
+        inicio = Math.max(1, fin - 4);
+    }
+
+    if (inicio > 1) {
+        const li1 = document.createElement('li');
+        li1.className = 'page-item';
+        li1.innerHTML = `<button class="page-link" type="button">1</button>`;
+        li1.querySelector('button').addEventListener('click', () => onCambiarPagina(1));
+        ulElement.appendChild(li1);
+
+        if (inicio > 2) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ulElement.appendChild(liDots);
+        }
+    }
+
+    for (let i = inicio; i <= fin; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === pagActual ? 'active' : ''}`;
+        li.innerHTML = `<button class="page-link" type="button">${i}</button>`;
+        if (i !== pagActual) {
+            const n = i;
+            li.querySelector('button').addEventListener('click', () => onCambiarPagina(n));
+        }
+        ulElement.appendChild(li);
+    }
+
+    if (fin < cantPaginas) {
+        if (fin < cantPaginas - 1) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ulElement.appendChild(liDots);
+        }
+        const liFin = document.createElement('li');
+        liFin.className = 'page-item';
+        liFin.innerHTML = `<button class="page-link" type="button">${cantPaginas}</button>`;
+        liFin.querySelector('button').addEventListener('click', () => onCambiarPagina(cantPaginas));
+        ulElement.appendChild(liFin);
+    }
+
+    // Botón Siguiente
+    const liNext = document.createElement('li');
+    liNext.className = `page-item ${pagActual >= cantPaginas ? 'disabled' : ''}`;
+    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">&raquo;</button>`;
+    if (pagActual < cantPaginas) {
+        liNext.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual + 1));
+    }
+    ulElement.appendChild(liNext);
 }

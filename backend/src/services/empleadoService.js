@@ -5,20 +5,11 @@
  * ============================================================================
  */
 
-import usuarioRepository from '../repositories/usuarioRepository.js';
 import articuloRepository from '../repositories/articuloRepository.js';
 import incidenciaRepository from '../repositories/incidenciaRepository.js';
 import emailService from '../utils/emailService.js';
 
 class EmpleadoService {
-  async getEmpleados() {
-    return await usuarioRepository.findEmpleados();
-  }
-
-  async getArticulos() {
-    return await articuloRepository.findAll({ traerTodos: false });
-  }
-
   async crearIncidencia({ id_articulo, prioridad, descripcion_pedido, idUsuario, asignado_a = 0 }) {
     if (!id_articulo || !descripcion_pedido) {
       const error = new Error('Faltan campos obligatorios: id_articulo y descripcion_pedido');
@@ -47,10 +38,6 @@ class EmpleadoService {
       await incidenciaRepository.addHistorialEstado(nueva.id_incidencia, ID_PENDIENTE, client);
       return nueva;
     });
-  }
-
-  async getMisIncidencias(idUsuario) {
-    return await incidenciaRepository.findByUsuarioCreador(idUsuario);
   }
 
   async cancelarIncidencia(idIncidencia, idUsuario) {

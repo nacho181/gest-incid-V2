@@ -10,10 +10,6 @@ import emailService from '../utils/emailService.js';
 import ROLES from '../utils/roles.js';
 
 class SistemasService {
-  async getIncidenciasAsignadas(idUsuario) {
-    return await incidenciaRepository.findAsignadasATecnico(idUsuario);
-  }
-
   async finalizarIncidencia({ idIncidencia, descripcion_resolucion, usuarioAutenticado }) {
     if (!descripcion_resolucion || typeof descripcion_resolucion !== 'string' || descripcion_resolucion.trim() === '') {
       const error = new Error('Debes proporcionar una descripción detallada de la resolución técnica para finalizar la incidencia.');
@@ -35,12 +31,7 @@ class SistemasService {
       throw error;
     }
 
-    let client;
-    let incidenciaActualizada;
-    try {
-      client = await incidenciaRepository.getClient();
-      await client.query('BEGIN');
-
+    const incidenciaActualizada = await incidenciaRepository.transaction(async (client) => {
       const incidencia = await incidenciaRepository.findByIdForUpdate(idInc, client);
       if (!incidencia) {
         const error = new Error(`La incidencia #${idInc} no existe en el sistema.`);
@@ -66,21 +57,16 @@ class SistemasService {
         throw error;
       }
 
-      incidenciaActualizada = await incidenciaRepository.finalizar(idInc, resolucionLimpia, client);
-      if (!incidenciaActualizada) {
+      const actualizada = await incidenciaRepository.finalizar(idInc, resolucionLimpia, client);
+      if (!actualizada) {
         const error = new Error('La incidencia cambió de estado y ya no puede finalizarse.');
         error.statusCode = 409;
         throw error;
       }
 
       await incidenciaRepository.addHistorialEstado(idInc, 3, client);
-      await client.query('COMMIT');
-    } catch (error) {
-      if (client) await client.query('ROLLBACK').catch(() => {});
-      throw error;
-    } finally {
-      if (client) client.release();
-    }
+      return actualizada;
+    });
 
     // Datos para el correo (fuera de la transacción)
     const detalle = await incidenciaRepository.findByIdWithDetails(idInc);

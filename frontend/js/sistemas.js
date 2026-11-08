@@ -15,6 +15,12 @@ let incidenciasCache = [];
 let filtroEstadoActual = 'todos';
 let idIncidenciaSeleccionadaModal = null;
 
+// Paginación de Sistemas
+let paginaActualSistemas = 1;
+const limiteSistemas = 10;
+let totalRegistrosSistemas = 0;
+let totalPaginasSistemas = 1;
+
 // Referencias a Modales y Notificaciones de Bootstrap
 let modalFinalizarBs = null;
 let modalVerResolucionBs = null;
@@ -30,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!tokenJWT || !userData || (userData.rol !== 2 && userData.rol !== 1)) {
-        console.warn('Acceso restringido: Se requiere rol de Empleado de Sistemas');
         window.location.href = 'index.html';
         return;
     }
@@ -109,7 +114,8 @@ function setupEventListenersSistemas() {
     // Refrescar listado
     const btnRefrescar = document.getElementById('btnRefrescar');
     if (btnRefrescar) {
-        btnRefrescar.addEventListener('click', () => {
+        btnRefrescar.addEventListener('click', (e) => {
+            e.currentTarget?.blur();
             cargarIncidenciasAsignadas();
             mostrarToast('Listado de incidencias actualizado', 'info');
         });
@@ -119,11 +125,13 @@ function setupEventListenersSistemas() {
     const btnGroup = document.querySelector('.btn-group[aria-label="Filtro de Estado"]');
     if (btnGroup) {
         btnGroup.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
+            const btn = e.target.closest('button');
+            if (btn) {
                 btnGroup.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                filtroEstadoActual = e.target.dataset.filter || 'todos';
-                aplicarFiltroYRenderizar();
+                btn.classList.add('active');
+                filtroEstadoActual = btn.dataset.filter || 'todos';
+                paginaActualSistemas = 1;
+                cargarIncidenciasAsignadas(1);
             }
         });
     }
@@ -155,9 +163,10 @@ function setupEventListenersSistemas() {
 }
 
 /**
- * GET /incidencias: para el rol Sistemas devuelve las incidencias asignadas a su cargo.
+ * GET /incidencias: para el rol Sistemas devuelve las incidencias asignadas a su cargo con paginación LIMIT/OFFSET.
  */
-async function cargarIncidenciasAsignadas() {
+async function cargarIncidenciasAsignadas(pagina = 1) {
+    paginaActualSistemas = pagina;
     const tbody = document.getElementById('tbodyIncidenciasSistemas');
     if (!tbody) return;
 
@@ -171,7 +180,12 @@ async function cargarIncidenciasAsignadas() {
     `;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/incidencias`, {
+        let filtroUrl = '';
+        if (filtroEstadoActual === 'pendientes') filtroUrl = '&id_estado=1';
+        else if (filtroEstadoActual === 'proceso') filtroUrl = '&id_estado=2';
+        else if (filtroEstadoActual === 'resueltas') filtroUrl = '&id_estado=3';
+
+        const response = await fetch(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteSistemas}${filtroUrl}`, {
             headers: getAuthHeaders()
         });
 
@@ -179,58 +193,165 @@ async function cargarIncidenciasAsignadas() {
             throw new Error('Error al consultar incidencias asignadas');
         }
 
-        incidenciasCache = await response.json();
-        actualizarMetricasCards(incidenciasCache);
-        aplicarFiltroYRenderizar();
+        const rawData = await response.json();
+        incidenciasCache = Array.isArray(rawData) ? rawData : (rawData.data || []);
+        const pagination = rawData.pagination || {
+            total: incidenciasCache.length,
+            page: pagina,
+            limit: limiteSistemas,
+            total_pages: Math.ceil(incidenciasCache.length / limiteSistemas) || 1
+        };
+
+        totalRegistrosSistemas = pagination.total;
+        totalPaginasSistemas = pagination.total_pages || 1;
+
+        renderizarTablaSistemas(incidenciasCache);
+
+        // Actualizar paginador y leyenda
+        const ulPag = document.getElementById('paginacionSistemas');
+        const lblInfo = document.getElementById('lblInfoPaginacionSistemas');
+        const lblTop = document.getElementById('lblCantidadFiltrada');
+
+        renderizarPaginador({
+            ulElement: ulPag,
+            infoElement: lblInfo,
+            total: totalRegistrosSistemas,
+            page: paginaActualSistemas,
+            limit: limiteSistemas,
+            totalPages: totalPaginasSistemas,
+            onCambiarPagina: (nuevaPagina) => cargarIncidenciasAsignadas(nuevaPagina),
+            singular: 'incidencia asignada',
+            plural: 'incidencias asignadas'
+        });
+
+        if (lblTop && lblInfo) {
+            lblTop.textContent = lblInfo.textContent;
+        }
+
+        // Cargar métricas en segundo plano para reflejar totales reales de toda la asignación
+        cargarMetricasGlobalesSistemas();
 
     } catch (error) {
         console.error('Error cargando incidencias asignadas:', error);
         tbody.innerHTML = `
             <tr>
                 <td colspan="8" class="text-center text-danger py-4">
-                    Error al conectar con la API REST de Sistemas. Verifique su conexión o sesión.
+                    No fue posible cargar las incidencias asignadas. Verifique su conexión o inicie sesión nuevamente.
                 </td>
             </tr>
         `;
     }
 }
 
-function actualizarMetricasCards(incidencias) {
-    let total = incidencias.length;
-    let pend = 0;
-    let proc = 0;
-    let res = 0;
+async function cargarMetricasGlobalesSistemas() {
+    try {
+        const headers = getAuthHeaders();
+        const consultarTotal = async (query = '') => {
+            const res = await fetch(`${API_BASE_URL}/incidencias?page=1&limit=1${query}`, { headers });
+            if (!res.ok) return 0;
+            const body = await res.json();
+            return body?.pagination?.total ?? 0;
+        };
 
-    incidencias.forEach(inc => {
-        const est = (inc.estado_descripcion || '').toLowerCase();
-        if (est.includes('pendiente') || inc.id_estado === 1) pend++;
-        else if (est.includes('proceso') || inc.id_estado === 2) proc++;
-        else if (est.includes('resuel') || est.includes('finaliz') || inc.id_estado === 3) res++;
-    });
+        const [total, pend, proc, res] = await Promise.all([
+            consultarTotal(''),
+            consultarTotal('&id_estado=1'),
+            consultarTotal('&id_estado=2'),
+            consultarTotal('&id_estado=3')
+        ]);
 
-    document.getElementById('metricTotal').textContent = total;
-    document.getElementById('metricPendientes').textContent = pend;
-    document.getElementById('metricEnProceso').textContent = proc;
-    document.getElementById('metricResueltas').textContent = res;
+        document.getElementById('metricTotal').textContent = total;
+        document.getElementById('metricPendientes').textContent = pend;
+        document.getElementById('metricEnProceso').textContent = proc;
+        document.getElementById('metricResueltas').textContent = res;
+    } catch (_) {
+        // Silencioso en actualización secundaria de métricas
+    }
 }
 
-function aplicarFiltroYRenderizar() {
-    let filtradas = [...incidenciasCache];
+function renderizarPaginador({ ulElement, infoElement, total, page, limit, totalPages, onCambiarPagina, singular = 'registro', plural = 'registros' }) {
+    if (!ulElement) return;
+    ulElement.innerHTML = '';
 
-    if (filtroEstadoActual === 'pendientes') {
-        filtradas = filtradas.filter(inc => inc.id_estado === 1 || (inc.estado_descripcion || '').toLowerCase().includes('pendiente'));
-    } else if (filtroEstadoActual === 'proceso') {
-        filtradas = filtradas.filter(inc => inc.id_estado === 2 || (inc.estado_descripcion || '').toLowerCase().includes('proceso'));
-    } else if (filtroEstadoActual === 'resueltas') {
-        filtradas = filtradas.filter(inc => inc.id_estado === 3 || (inc.estado_descripcion || '').toLowerCase().includes('resuel'));
+    const totalNum = parseInt(total, 10) || 0;
+    const pagActual = parseInt(page, 10) || 1;
+    const cantPaginas = parseInt(totalPages, 10) || 1;
+
+    if (infoElement) {
+        if (totalNum === 0) {
+            infoElement.textContent = `No se encontraron ${plural}`;
+        } else {
+            const desde = (pagActual - 1) * limit + 1;
+            const hasta = Math.min(pagActual * limit, totalNum);
+            infoElement.textContent = `Mostrando ${desde} a ${hasta} de ${totalNum} ${totalNum === 1 ? singular : plural}`;
+        }
     }
 
-    const lbl = document.getElementById('lblCantidadFiltrada');
-    if (lbl) {
-        lbl.textContent = `Mostrando ${filtradas.length} de ${incidenciasCache.length} incidencias`;
+    if (cantPaginas <= 1) return;
+
+    // Botón Anterior
+    const liPrev = document.createElement('li');
+    liPrev.className = `page-item ${pagActual <= 1 ? 'disabled' : ''}`;
+    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">&laquo;</button>`;
+    if (pagActual > 1) {
+        liPrev.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual - 1));
+    }
+    ulElement.appendChild(liPrev);
+
+    let inicio = Math.max(1, pagActual - 2);
+    let fin = Math.min(cantPaginas, inicio + 4);
+    if (fin - inicio < 4) {
+        inicio = Math.max(1, fin - 4);
     }
 
-    renderizarTablaSistemas(filtradas);
+    if (inicio > 1) {
+        const li1 = document.createElement('li');
+        li1.className = 'page-item';
+        li1.innerHTML = `<button class="page-link" type="button">1</button>`;
+        li1.querySelector('button').addEventListener('click', () => onCambiarPagina(1));
+        ulElement.appendChild(li1);
+
+        if (inicio > 2) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ulElement.appendChild(liDots);
+        }
+    }
+
+    for (let i = inicio; i <= fin; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === pagActual ? 'active' : ''}`;
+        li.innerHTML = `<button class="page-link" type="button">${i}</button>`;
+        if (i !== pagActual) {
+            const n = i;
+            li.querySelector('button').addEventListener('click', () => onCambiarPagina(n));
+        }
+        ulElement.appendChild(li);
+    }
+
+    if (fin < cantPaginas) {
+        if (fin < cantPaginas - 1) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ulElement.appendChild(liDots);
+        }
+        const liFin = document.createElement('li');
+        liFin.className = 'page-item';
+        liFin.innerHTML = `<button class="page-link" type="button">${cantPaginas}</button>`;
+        liFin.querySelector('button').addEventListener('click', () => onCambiarPagina(cantPaginas));
+        ulElement.appendChild(liFin);
+    }
+
+    // Botón Siguiente
+    const liNext = document.createElement('li');
+    liNext.className = `page-item ${pagActual >= cantPaginas ? 'disabled' : ''}`;
+    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">&raquo;</button>`;
+    if (pagActual < cantPaginas) {
+        liNext.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual + 1));
+    }
+    ulElement.appendChild(liNext);
 }
 
 function renderizarTablaSistemas(lista) {
@@ -270,11 +391,11 @@ function renderizarTablaSistemas(lista) {
 
         let botonAccion = '';
         if (esFinalizada) {
-            botonAccion = `<button data-action="ver-resolucion" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-success fw-semibold"><i class="bi bi-eye me-1"></i> Ver Solución</button>`;
+            botonAccion = `<button data-action="ver-resolucion" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-concordia btn-row-action fw-semibold text-nowrap"><i class="bi bi-eye me-1"></i> Ver Solución</button>`;
         } else if (esCancelada) {
-            botonAccion = `<span class="text-muted small">Cancelada</span>`;
+            botonAccion = `<span class="text-muted small">Sin acciones</span>`;
         } else {
-            botonAccion = `<button data-action="finalizar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-concordia fw-bold"><i class="bi bi-check2-circle me-1"></i> Finalizar Ticket</button>`;
+            botonAccion = `<button data-action="finalizar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-concordia btn-row-action fw-semibold text-nowrap"><i class="bi bi-check2-circle me-1"></i> Resolver Incidencia</button>`;
         }
 
         return `
@@ -323,7 +444,7 @@ async function enviarFinalizacionIncidencia(e) {
 
     const descripcion_resolucion = document.getElementById('txtResolucion').value.trim();
     if (!descripcion_resolucion) {
-        mostrarToast('Debes ingresar la descripción de la resolución técnica.', 'error');
+        mostrarToast('Por favor, describa la solución técnica aplicada.', 'error');
         return;
     }
 
@@ -342,15 +463,15 @@ async function enviarFinalizacionIncidencia(e) {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.mensaje || 'Error al finalizar la incidencia');
+            throw new Error(data.mensaje || 'No fue posible registrar la resolución de la incidencia. Por favor, intente nuevamente.');
         }
 
         // El aviso depende del resultado real del envío del correo
         const correo = data.notificacion_email;
         if (correo && correo.exito) {
-            mostrarToast(`¡Incidencia #${idFinalizada} resuelta! Notificación por correo enviada.`, 'exito');
+            mostrarToast(`Incidencia #${idFinalizada} resuelta. Se notificó al solicitante por correo electrónico.`, 'exito');
         } else {
-            mostrarToast(`Incidencia #${idFinalizada} resuelta, pero no se pudo enviar el correo de notificación.`, 'info');
+            mostrarToast(`Incidencia #${idFinalizada} resuelta correctamente (aviso por correo pendiente de entrega).`, 'info');
         }
 
         if (modalFinalizarBs) {
@@ -375,7 +496,7 @@ function abrirModalVerResolucion(idIncidencia) {
     document.getElementById('verModalId').textContent = idIncidencia;
     document.getElementById('verModalEquipo').textContent = `${inc.articulo_descripcion || 'Equipo'} — Solicitado por ${inc.usuario_creador || 'Empleado'}`;
     document.getElementById('verModalFalla').textContent = inc.descripcion_pedido || 'Sin descripción del inconveniente';
-    document.getElementById('verModalResolucion').textContent = inc.descripcion_resolucion || 'Resolución registrada sin detalle en texto.';
+    document.getElementById('verModalResolucion').textContent = inc.descripcion_resolucion || 'Resolución registrada sin observaciones adicionales.';
 
     if (modalVerResolucionBs) {
         modalVerResolucionBs.show();

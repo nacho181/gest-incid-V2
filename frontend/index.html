@@ -23,7 +23,7 @@
             <!-- Acceso a Módulos y Perfil de usuario -->
             <div id="userProfileNav" class="d-none align-items-center gap-3 mt-2 mt-sm-0">
                 <a href="entidades.html" id="btnLinkEntidades" class="btn btn-outline-light btn-sm fw-semibold me-1">
-                    <i class="bi bi-folder2-open me-1"></i> Entidades Base
+                    <i class="bi bi-folder2-open me-1"></i> Catálogo de Artículos
                 </a>
                 <div class="text-white text-end">
                     <div id="lblUsuarioNombre" class="fw-bold small leading-tight">Usuario</div>
@@ -63,10 +63,10 @@
 
                     <form id="formLogin">
                         <div class="mb-3">
-                            <label for="txtLoginUsuario" class="form-label fw-semibold small">Usuario o Correo *</label>
+                            <label for="txtLoginUsuario" class="form-label fw-semibold small">Usuario o Correo Institucional *</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light text-muted"><i class="bi bi-person"></i></span>
-                                <input type="text" id="txtLoginUsuario" class="form-control" placeholder="ej: estren@correo.com" required autocomplete="username">
+                                <input type="text" id="txtLoginUsuario" class="form-control" placeholder="ej: usuario@concordia.gob.ar" required autocomplete="username">
                             </div>
                         </div>
 
@@ -93,8 +93,8 @@
             <!-- Banner Section -->
             <div class="card border-0 bg-concordia-gradient text-white p-4 mb-4 shadow-sm rounded-3">
                 <div class="card-body p-0">
-                    <h2 class="h4 fw-bold mb-2">Sistema de Registro de Incidencias</h2>
-                    <p class="mb-0 text-white-50">Panel de Gestión Municipal - Reporte y seguimiento de incidentes técnicos</p>
+                    <h2 class="h4 fw-bold mb-1">Portal de Gestión de Incidencias</h2>
+                    <p class="mb-0 text-white-50">Reporte, seguimiento y atención técnica de solicitudes municipales</p>
                 </div>
             </div>
 
@@ -109,7 +109,7 @@
                 <li class="nav-item" role="presentation">
                     <button class="nav-link fw-bold text-muted" id="btn-nueva-incidencia" data-bs-toggle="tab" data-bs-target="#tab-nueva-incidencia" type="button" role="tab">
                         <i class="bi bi-plus-circle me-1"></i>
-                        Reportar Nueva Incidencia
+                        Reportar Incidencia
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
@@ -126,7 +126,10 @@
                 <!-- Tab 1: Mis Incidencias -->
                 <div class="tab-pane fade show active" id="tab-mis-incidencias" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="h5 fw-bold text-concordia-dark mb-0">Mis Incidencias Reportadas</h3>
+                        <div>
+                            <h3 class="h5 fw-bold text-concordia-dark mb-0">Mis Incidencias Reportadas</h3>
+                            <span class="small text-muted">Historial y estado de las solicitudes iniciadas por su usuario</span>
+                        </div>
                         <button id="btnRefreshIncidencias" class="btn btn-outline-concordia btn-sm fw-semibold">
                             <i class="bi bi-arrow-clockwise me-1"></i>
                             Actualizar
@@ -138,10 +141,10 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-concordia">
                                     <tr>
-                                        <th># ID</th>
+                                        <th style="width: 100px;">N° Ticket</th>
                                         <th>Fecha</th>
-                                        <th>Artículo</th>
-                                        <th>Descripción</th>
+                                        <th>Equipo / Artículo</th>
+                                        <th>Descripción del Problema</th>
                                         <th>Prioridad</th>
                                         <th>Estado</th>
                                         <th class="text-end">Acciones</th>
@@ -154,6 +157,13 @@
                                 </tbody>
                             </table>
                         </div>
+                        <!-- Barra de Paginación de Mis Incidencias -->
+                        <div class="card-footer bg-white border-top d-flex flex-column flex-md-row justify-content-between align-items-center py-2 px-3 gap-2">
+                            <span class="text-muted small" id="lblInfoPaginacionMisIncidencias">Cargando incidencias...</span>
+                            <nav aria-label="Navegación de mis incidencias">
+                                <ul class="pagination pagination-sm mb-0" id="paginacionMisIncidencias"></ul>
+                            </nav>
+                        </div>
                     </div>
                 </div>
 
@@ -162,12 +172,12 @@
                     <div class="row justify-content-center">
                         <div class="col-md-8 col-lg-7">
                             <div class="card shadow-sm border-0 rounded-3 p-4">
-                                <h3 class="h5 fw-bold text-concordia-dark mb-1">Crear Nueva Incidencia</h3>
-                                <p class="small text-muted mb-4">Selecciona el artículo afectado y describe detalladamente el inconveniente presentado.</p>
+                                <h3 class="h5 fw-bold text-concordia-dark mb-1">Reportar Nueva Incidencia</h3>
+                                <p class="small text-muted mb-4">Seleccione el equipo afectado e indique con claridad el inconveniente presentado para su resolución técnica.</p>
 
                                 <form id="formNuevaIncidencia">
                                     <div class="mb-3">
-                                        <label for="selectArticulo" class="form-label fw-semibold">Artículo o Equipamiento *</label>
+                                        <label for="selectArticulo" class="form-label fw-semibold">Equipo o Artículo Afectado *</label>
                                         <select id="selectArticulo" class="form-select" required>
                                             <option value="" selected></option>
                                         </select>
@@ -176,15 +186,15 @@
                                     <div class="mb-3">
                                         <label for="selectPrioridad" class="form-label fw-semibold">Nivel de Prioridad *</label>
                                         <select id="selectPrioridad" class="form-select" required>
-                                            <option value="3">Baja - Inconveniente menor o consulta</option>
-                                            <option value="2" selected>Media - Dificulta el trabajo regular</option>
-                                            <option value="1">Alta - Impide realizar tareas críticas</option>
+                                            <option value="3">Baja — Inconveniente menor o consulta general</option>
+                                            <option value="2" selected>Media — Dificulta las tareas habituales</option>
+                                            <option value="1">Alta — Tarea crítica detenida / Atención urgente</option>
                                         </select>
                                     </div>
 
                                     <div class="mb-4">
-                                        <label for="txtDescripcion" class="form-label fw-semibold">Descripción del Pedido / Falla *</label>
-                                        <textarea id="txtDescripcion" class="form-control" rows="4" placeholder="Ej: La impresora no enciende o tiene un atasco de papel..." required></textarea>
+                                        <label for="txtDescripcion" class="form-label fw-semibold">Descripción del Problema *</label>
+                                        <textarea id="txtDescripcion" class="form-control" rows="4" placeholder="Describa el inconveniente observado con la mayor precisión posible (ej: La impresora no toma papel o emite un mensaje de error persistente)..." required></textarea>
                                     </div>
 
                                     <div class="d-flex justify-content-end">
@@ -203,11 +213,11 @@
                 <div class="tab-pane fade" id="tab-articulos" role="tabpanel">
                     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                         <div>
-                            <h3 class="h5 fw-bold text-concordia-dark mb-0">Artículos y Equipamientos Registrados</h3>
-                            <span class="small text-muted">Catálogo para reporte de incidencias</span>
+                            <h3 class="h5 fw-bold text-concordia-dark mb-0">Catálogo de Artículos y Equipamiento</h3>
+                            <span class="small text-muted">Listado de equipamientos disponibles para el reporte de incidencias</span>
                         </div>
                         <div class="d-flex gap-2">
-                            <input type="text" id="searchArticulos" class="form-control form-control-sm" style="max-width: 250px;" placeholder="Buscar por artículo, área o categoría...">
+                            <input type="text" id="searchArticulos" class="form-control form-control-sm" style="max-width: 260px;" placeholder="Buscar por equipo, área o categoría...">
                         </div>
                     </div>
 
@@ -220,9 +230,33 @@
         </section>
     </main>
 
+    <!-- Modal de Confirmación para Cancelar Incidencia -->
+    <div class="modal fade" id="modalConfirmarCancelacion" tabindex="-1" aria-labelledby="modalCancelarLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-danger text-white rounded-top-4">
+                    <h5 class="modal-title h6 fw-bold" id="modalCancelarLabel">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Confirmar Cancelación de Solicitud
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-2">¿Está seguro de que desea cancelar la solicitud <strong id="lblIncidenciaCancelarId">#0</strong>?</p>
+                    <p class="small text-muted mb-0">Una vez cancelada, la solicitud quedará sin efecto y no será derivada al equipo técnico.</p>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold" data-bs-dismiss="modal">Volver</button>
+                    <button type="button" id="btnConfirmarCancelacionModal" class="btn btn-danger btn-sm fw-bold">
+                        <i class="bi bi-x-circle me-1"></i> Sí, cancelar solicitud
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="footer bg-dark text-light py-3 mt-auto">
         <div class="container text-center small text-white-50">
-            &copy; 2026 Municipalidad de Concordia - Entre Ríos. Trabajo Integrador de Programación.
+            &copy; 2026 Municipalidad de Concordia - Entre Ríos. Sistema Integral de Gestión de Incidencias.
         </div>
     </footer>
 

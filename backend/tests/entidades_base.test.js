@@ -69,13 +69,15 @@ async function runTests() {
     console.log('--- PRUEBAS: BREAD DE CATEGORÍAS ---');
 
     // 1. Browse (Listar activas)
-    console.log('Test 1: [Browse] Listar categorías activas...');
+    console.log('Test 1: [Browse] Listar categorías activas con paginación...');
     const resBrowseCat = await request('GET', '/api/v1/categorias', null, authHeaders);
     assert.strictEqual(resBrowseCat.status, 200);
-    assert.strictEqual(Array.isArray(resBrowseCat.body), true);
-    const todasActivas = resBrowseCat.body.every(c => c.activo === 1);
+    const listaCat = Array.isArray(resBrowseCat.body) ? resBrowseCat.body : resBrowseCat.body.data;
+    assert.strictEqual(Array.isArray(listaCat), true);
+    assert.ok(resBrowseCat.body.pagination, 'Debe incluir metadata de paginación');
+    const todasActivas = listaCat.every(c => c.activo === 1);
     assert.strictEqual(todasActivas, true, 'Todas las categorías listadas deben estar activas por defecto');
-    console.log(`   ✅ Se listaron ${resBrowseCat.body.length} categorías activas.`);
+    console.log(`   ✅ Se listaron ${listaCat.length} categorías activas.`);
 
     // 2. Add (Crear categoría)
     console.log('Test 2: [Add] Crear nueva categoría...');
@@ -123,11 +125,13 @@ async function runTests() {
     assert.strictEqual(resCheckCat.body.activo, 0, 'El estado DEBE ser inactivo (activo = 0)');
 
     const resBrowseCat2 = await request('GET', '/api/v1/categorias', null, authHeaders);
-    const estaEnBrowseActivo = resBrowseCat2.body.some(c => c.id_categoria === idCatCreada);
+    const listaCat2 = Array.isArray(resBrowseCat2.body) ? resBrowseCat2.body : resBrowseCat2.body.data;
+    const estaEnBrowseActivo = listaCat2.some(c => c.id_categoria === idCatCreada);
     assert.strictEqual(estaEnBrowseActivo, false, 'No debe aparecer en el listado de activos');
 
-    const resBrowseCatInact = await request('GET', '/api/v1/categorias?incluir_inactivos=true', null, authHeaders);
-    const estaEnBrowseInact = resBrowseCatInact.body.some(c => c.id_categoria === idCatCreada);
+    const resBrowseCatInact = await request('GET', '/api/v1/categorias?incluir_inactivos=true&limit=100', null, authHeaders);
+    const listaCatInact = Array.isArray(resBrowseCatInact.body) ? resBrowseCatInact.body : resBrowseCatInact.body.data;
+    const estaEnBrowseInact = listaCatInact.some(c => c.id_categoria === idCatCreada);
     assert.strictEqual(estaEnBrowseInact, true, 'DEBE aparecer al solicitar incluir_inactivos=true');
     console.log('   ✅ Verificado: Borrado físico NO utilizado. El registro permanece con activo = 0.');
 
@@ -152,13 +156,15 @@ async function runTests() {
     console.log('\n--- PRUEBAS: BREAD DE ARTÍCULOS ---');
 
     // 9. Browse (Listar activos)
-    console.log('Test 9: [Browse] Listar artículos activos...');
+    console.log('Test 9: [Browse] Listar artículos activos con paginación...');
     const resBrowseArt = await request('GET', '/api/v1/articulos', null, authHeaders);
     assert.strictEqual(resBrowseArt.status, 200);
-    assert.strictEqual(Array.isArray(resBrowseArt.body), true);
-    const todosArtActivos = resBrowseArt.body.every(a => a.activo === 1);
+    const listaArt = Array.isArray(resBrowseArt.body) ? resBrowseArt.body : resBrowseArt.body.data;
+    assert.strictEqual(Array.isArray(listaArt), true);
+    assert.ok(resBrowseArt.body.pagination, 'Debe incluir metadata de paginación');
+    const todosArtActivos = listaArt.every(a => a.activo === 1);
     assert.strictEqual(todosArtActivos, true, 'Todos los artículos listados deben estar activos por defecto');
-    console.log(`   ✅ Se listaron ${resBrowseArt.body.length} artículos activos.`);
+    console.log(`   ✅ Se listaron ${listaArt.length} artículos activos.`);
 
     // 10. Add (Crear artículo)
     console.log('Test 10: [Add] Crear nuevo artículo con área y categoría...');
@@ -216,11 +222,13 @@ async function runTests() {
     assert.strictEqual(resCheckArt.body.activo, 0, 'El estado del artículo DEBE ser 0 (inactivo)');
 
     const resBrowseArt2 = await request('GET', '/api/v1/articulos', null, authHeaders);
-    const estaEnBrowseArtActivo = resBrowseArt2.body.some(a => a.id_articulo === idArtCreado);
+    const listaArt2 = Array.isArray(resBrowseArt2.body) ? resBrowseArt2.body : resBrowseArt2.body.data;
+    const estaEnBrowseArtActivo = listaArt2.some(a => a.id_articulo === idArtCreado);
     assert.strictEqual(estaEnBrowseArtActivo, false, 'No debe aparecer en el listado activo estándar');
 
-    const resBrowseArtInact = await request('GET', '/api/v1/articulos?incluir_inactivos=true', null, authHeaders);
-    const estaEnBrowseArtInact = resBrowseArtInact.body.some(a => a.id_articulo === idArtCreado);
+    const resBrowseArtInact = await request('GET', '/api/v1/articulos?incluir_inactivos=true&limit=100', null, authHeaders);
+    const listaArtInact = Array.isArray(resBrowseArtInact.body) ? resBrowseArtInact.body : resBrowseArtInact.body.data;
+    const estaEnBrowseArtInact = listaArtInact.some(a => a.id_articulo === idArtCreado);
     assert.strictEqual(estaEnBrowseArtInact, true, 'DEBE aparecer cuando se solicita incluir_inactivos=true');
     console.log('   ✅ Verificado: Borrado físico NO utilizado. El artículo permanece con activo = 0.');
 
@@ -249,12 +257,67 @@ async function runTests() {
     // SECCIÓN 3: ÁREAS MUNICIPALES
     // ========================================================================
     console.log('\n--- PRUEBAS: ÁREAS ---');
-    console.log('Test 17: Listado de Áreas activas...');
+    console.log('Test 17: Listado de Áreas activas con paginación...');
     const resAreas = await request('GET', '/api/v1/areas');
     assert.strictEqual(resAreas.status, 200);
-    assert.strictEqual(Array.isArray(resAreas.body), true);
-    assert.ok(resAreas.body.length > 0);
-    console.log(`   ✅ Se listaron ${resAreas.body.length} áreas municipales activas.`);
+    const listaAreas = Array.isArray(resAreas.body) ? resAreas.body : resAreas.body.data;
+    assert.strictEqual(Array.isArray(listaAreas), true);
+    assert.ok(listaAreas.length > 0);
+    console.log(`   ✅ Se listaron ${listaAreas.length} áreas municipales activas.`);
+
+    // ========================================================================
+    // SECCIÓN 4: PRUEBAS DE PAGINACIÓN (LIMIT/OFFSET), FILTRADO Y ORDENAMIENTO EN BD
+    // ========================================================================
+    console.log('\n--- PRUEBAS: PAGINACIÓN, ORDENAMIENTO Y FILTRADO (U3-04) ---');
+
+    // Test 18: Paginación en BD con LIMIT y OFFSET en Categorías
+    console.log('Test 18: Paginación en Categorías con limit=2 y page=1 (LIMIT 2 OFFSET 0)...');
+    const resPag1 = await request('GET', '/api/v1/categorias?page=1&limit=2', null, authHeaders);
+    assert.strictEqual(resPag1.status, 200);
+    assert.ok(resPag1.body.pagination, 'Debe incluir estructura de paginación');
+    assert.strictEqual(resPag1.body.pagination.page, 1);
+    assert.strictEqual(resPag1.body.pagination.limit, 2);
+    assert.strictEqual(resPag1.body.data.length, 2);
+    assert.strictEqual(resPag1.body.pagination.has_next, true);
+    assert.strictEqual(resPag1.body.pagination.has_prev, false);
+    const idItemPage1 = resPag1.body.data[0].id_categoria;
+
+    console.log('Test 19: Paginación en Categorías con limit=2 y page=2 (LIMIT 2 OFFSET 2)...');
+    const resPag2 = await request('GET', '/api/v1/categorias?page=2&limit=2', null, authHeaders);
+    assert.strictEqual(resPag2.status, 200);
+    assert.strictEqual(resPag2.body.pagination.page, 2);
+    assert.strictEqual(resPag2.body.pagination.limit, 2);
+    assert.strictEqual(resPag2.body.data.length, 2);
+    assert.strictEqual(resPag2.body.pagination.has_prev, true);
+    const idItemPage2 = resPag2.body.data[0].id_categoria;
+    assert.notStrictEqual(idItemPage1, idItemPage2, 'El primer elemento de la página 2 debe ser diferente al de la página 1 gracias al OFFSET');
+    console.log(`   ✅ Paginación LIMIT/OFFSET verificada: Pág 1 empieza en #${idItemPage1}, Pág 2 en #${idItemPage2}.`);
+
+    // Test 20: Ordenamiento validado contra Whitelist en Artículos
+    console.log('Test 20: Ordenamiento de Artículos por descripción DESC...');
+    const resSortDesc = await request('GET', '/api/v1/articulos?order_by=descripcion&order_dir=DESC', null, authHeaders);
+    assert.strictEqual(resSortDesc.status, 200);
+    const artsDesc = resSortDesc.body.data;
+    if (artsDesc.length >= 2) {
+      assert.ok(artsDesc[0].descripcion.localeCompare(artsDesc[1].descripcion) >= 0, 'Debe estar ordenado descendentemente');
+    }
+    console.log('   ✅ Ordenamiento DESC validado correctamente.');
+
+    // Test 21: Protección contra SQL Injection en order_by
+    console.log('Test 21: Protección contra SQL Injection en order_by (Whitelist fallback)...');
+    const resSqlInj = await request('GET', '/api/v1/articulos?order_by=descripcion;DROP+TABLE+articulos--&order_dir=DESC', null, authHeaders);
+    assert.strictEqual(resSqlInj.status, 200, 'No debe ejecutar SQL malicioso ni romper la consulta');
+    assert.ok(Array.isArray(resSqlInj.body.data), 'Debe retornar los datos aplicando la columna por omisión');
+    console.log('   ✅ Protección anti-inyección SQL en order_by verificada exitosamente.');
+
+    // Test 22: Filtrado en BD con search y categoría
+    console.log('Test 22: Filtrado a nivel de base de datos con search...');
+    const resFiltro = await request('GET', `/api/v1/articulos?buscar=${encodeURIComponent(artNombre)}`, null, authHeaders);
+    assert.strictEqual(resFiltro.status, 200);
+    assert.ok(resFiltro.body.data.length >= 1);
+    assert.ok(resFiltro.body.data.every(a => a.descripcion.includes(artNombre)));
+    assert.strictEqual(resFiltro.body.pagination.total, resFiltro.body.data.length);
+    console.log(`   ✅ Filtrado en base de datos verificado: total filtrado = ${resFiltro.body.pagination.total}.`);
 
     console.log('\n========================================================================');
     console.log('🎉 TODAS LAS PRUEBAS DE ENTIDADES BASE (BREAD Y SOFT DELETES) PASARON EXITOSAMENTE!');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Municipalidad de Concordia - Panel Empleado de Sistemas</title>
+    <title>Municipalidad de Concordia - Panel del Área de Sistemas</title>
 
     <!-- Hoja de estilos personalizada -->
     <link rel="stylesheet" href="css/styles.css">
@@ -20,14 +20,14 @@
                 <a href="index.html" class="badge-logo bg-concordia-light text-white fw-bold px-3 py-2 rounded text-decoration-none logo-mc-interactive" title="Volver al Inicio">MC</a>
                 <div>
                     <h1 class="h5 mb-0 fw-bold text-white">Municipalidad de Concordia</h1>
-                    <span class="small text-concordia-accent">Área de Sistemas • Panel del Técnico</span>
+                    <span class="small text-concordia-accent">Área de Sistemas • Panel Técnico</span>
                 </div>
             </div>
 
-            <!-- Navegación de Roles y Token JWT Status -->
+            <!-- Información de Usuario y Acciones -->
             <div class="d-flex align-items-center gap-3 mt-2 mt-sm-0">
                 <a href="entidades.html" class="btn btn-sm btn-outline-light me-1 fw-semibold">
-                    <i class="bi bi-folder2-open me-1"></i> Entidades Base
+                    <i class="bi bi-folder2-open me-1"></i> Catálogo de Artículos
                 </a>
                 <div class="text-white text-end">
                     <div id="lblSistemasNombre" class="fw-bold small leading-tight">Empleado de Sistemas</div>
@@ -59,77 +59,55 @@
 
         <!-- Banner Encabezado -->
         <section class="card border-0 bg-concordia-gradient text-white p-4 mb-4 shadow-sm rounded-3">
-            <div class="card-body p-0 d-flex flex-wrap justify-content-between align-items-center">
-                <div>
-                    <h2 class="h4 fw-bold mb-1">Incidencias Asignadas a mi Cargo</h2>
-                    <p class="mb-0 text-white-50">Gestiona tickets técnicos asignados, carga resoluciones y notifica automáticamente por correo al solicitante.</p>
-                </div>
-                <div class="mt-3 mt-md-0">
-                    <button id="btnRefrescar" class="btn btn-light fw-bold text-concordia-dark shadow-sm">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Actualizar Listado
-                    </button>
-                </div>
+            <div class="card-body p-0">
+                <h2 class="h4 fw-bold mb-1">Incidencias Asignadas</h2>
+                <p class="mb-0 text-white-50">Gestión operativa, registro de resoluciones técnicas y notificación a los solicitantes</p>
             </div>
         </section>
 
         <!-- Tarjetas de Resumen (Métricas de Asignaciones) -->
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-4" id="cardsAsignadasContainer">
             <div class="col-6 col-md-3">
-                <div class="card border-0 shadow-sm rounded-3 p-3 h-100 border-start border-4 border-success">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-muted small fw-semibold">Total Asignadas</div>
-                            <div id="metricTotal" class="h3 fw-bold mb-0 text-dark">0</div>
-                        </div>
-                        <i class="bi bi-clipboard-data text-success fs-2"></i>
-                    </div>
+                <div class="card border-0 shadow-sm p-3 bg-secondary bg-opacity-10 rounded-3 h-100">
+                    <span class="small text-muted fw-semibold">Total Asignadas</span>
+                    <h4 id="metricTotal" class="fw-bold text-dark mb-0">0</h4>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card border-0 shadow-sm rounded-3 p-3 h-100 border-start border-4 border-warning">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-muted small fw-semibold">Pendientes</div>
-                            <div id="metricPendientes" class="h3 fw-bold mb-0 text-warning">0</div>
-                        </div>
-                        <i class="bi bi-clock-history text-warning fs-2"></i>
-                    </div>
+                <div class="card border-0 shadow-sm p-3 bg-warning bg-opacity-10 rounded-3 h-100">
+                    <span class="small text-muted fw-semibold">Pendientes</span>
+                    <h4 id="metricPendientes" class="fw-bold text-dark mb-0">0</h4>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card border-0 shadow-sm rounded-3 p-3 h-100 border-start border-4 border-info">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-muted small fw-semibold">En Proceso</div>
-                            <div id="metricEnProceso" class="h3 fw-bold mb-0 text-info">0</div>
-                        </div>
-                        <i class="bi bi-tools text-info fs-2"></i>
-                    </div>
+                <div class="card border-0 shadow-sm p-3 bg-info bg-opacity-10 rounded-3 h-100">
+                    <span class="small text-muted fw-semibold">En Proceso</span>
+                    <h4 id="metricEnProceso" class="fw-bold text-dark mb-0">0</h4>
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <div class="card border-0 shadow-sm rounded-3 p-3 h-100 border-start border-4 border-primary">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-muted small fw-semibold">Resueltas</div>
-                            <div id="metricResueltas" class="h3 fw-bold mb-0 text-primary">0</div>
-                        </div>
-                        <i class="bi bi-check-circle text-primary fs-2"></i>
-                    </div>
+                <div class="card border-0 shadow-sm p-3 bg-success bg-opacity-10 rounded-3 h-100">
+                    <span class="small text-muted fw-semibold">Resueltas</span>
+                    <h4 id="metricResueltas" class="fw-bold text-dark mb-0">0</h4>
                 </div>
             </div>
         </div>
 
-        <!-- Filtros Rápidos -->
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <div class="btn-group" role="group" aria-label="Filtro de Estado">
+        <!-- Barra de Control y Filtros Rápidos -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+            <div class="btn-group filter-segmented-group" role="group" aria-label="Filtro de Estado">
                 <button type="button" class="btn btn-outline-concordia btn-sm active" data-filter="todos">Todos</button>
                 <button type="button" class="btn btn-outline-concordia btn-sm" data-filter="pendientes">Pendientes</button>
                 <button type="button" class="btn btn-outline-concordia btn-sm" data-filter="proceso">En Proceso</button>
                 <button type="button" class="btn btn-outline-concordia btn-sm" data-filter="resueltas">Resueltas</button>
             </div>
-            <div class="text-muted small" id="lblCantidadFiltrada">
-                Mostrando todas las incidencias
+            <div class="d-flex align-items-center gap-3 ms-md-auto">
+                <span class="text-muted small fw-medium" id="lblCantidadFiltrada">
+                    Mostrando todas las incidencias
+                </span>
+                <button id="btnRefrescar" class="btn btn-outline-concordia btn-sm fw-semibold">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+                </button>
             </div>
         </div>
 
@@ -139,14 +117,14 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-concordia">
                         <tr>
-                            <th style="width: 70px;"># ID</th>
+                            <th style="width: 90px;">N° Ticket</th>
                             <th>Fecha</th>
                             <th>Solicitante</th>
-                            <th>Artículo / Equipo</th>
-                            <th>Falla Reportada</th>
+                            <th>Equipo / Artículo</th>
+                            <th>Detalle del Problema</th>
                             <th style="width: 100px;">Prioridad</th>
                             <th style="width: 110px;">Estado</th>
-                            <th class="text-end" style="width: 160px;">Acción</th>
+                            <th class="text-end" style="width: 170px;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tbodyIncidenciasSistemas">
@@ -158,6 +136,13 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            <!-- Barra de Paginación Interactiva -->
+            <div class="card-footer bg-white border-top d-flex flex-column flex-md-row justify-content-between align-items-center py-2 px-3 gap-2">
+                <span class="text-muted small" id="lblInfoPaginacionSistemas">Cargando paginación...</span>
+                <nav aria-label="Navegación de páginas de incidencias">
+                    <ul class="pagination pagination-sm mb-0" id="paginacionSistemas"></ul>
+                </nav>
             </div>
         </div>
 
@@ -180,18 +165,18 @@
                         <!-- Resumen de la Incidencia -->
                         <div class="bg-light p-3 rounded-3 mb-3 border">
                             <div class="small text-muted mb-1"><strong>Solicitante:</strong> <span id="modalSolicitante"></span></div>
-                            <div class="small text-muted mb-1"><strong>Equipo:</strong> <span id="modalArticulo"></span></div>
+                            <div class="small text-muted mb-1"><strong>Equipo / Artículo:</strong> <span id="modalArticulo"></span></div>
                             <div class="small text-muted"><strong>Problema reportado:</strong> <span id="modalDescripcion"></span></div>
                         </div>
 
                         <!-- Campo para la Descripción de la Resolución -->
                         <div class="mb-3">
                             <label for="txtResolucion" class="form-label fw-bold small text-concordia-dark">
-                                Descripción de la Resolución Técnica *
+                                Detalle de la Solución Aplicada *
                             </label>
-                            <textarea id="txtResolucion" class="form-control" rows="4" required placeholder="Describe las tareas realizadas y la solución implementada (ej: Reemplazo de baterías, calibración óptica y pruebas de conectividad exitosas)..."></textarea>
+                            <textarea id="txtResolucion" class="form-control" rows="4" required placeholder="Describa las tareas realizadas y la solución técnica aplicada (ej: Reemplazo de componentes, configuración del equipo y pruebas de funcionamiento exitosas)..."></textarea>
                             <div class="form-text small">
-                                Detalla la solución técnica con claridad para el historial del equipo.
+                                Registre con claridad las intervenciones técnicas realizadas para el historial del equipo.
                             </div>
                         </div>
 
@@ -199,7 +184,7 @@
                         <div class="alert alert-success d-flex align-items-center mb-0 py-2 px-3 small border-0" role="alert">
                             <i class="bi bi-envelope-check-fill fs-5 me-2 text-success"></i>
                             <div>
-                                Al confirmar, se enviará un <strong>correo electrónico automático</strong> al solicitante con la resolución técnica y la fecha de finalización.
+                                Al confirmar, se enviará una <strong>notificación por correo electrónico</strong> al solicitante con el detalle de la solución y la fecha de cierre.
                             </div>
                         </div>
                     </div>
@@ -222,7 +207,7 @@
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header bg-concordia-dark text-white rounded-top-4">
                     <h5 class="modal-title fw-bold" id="modalVerResolucionLabel">
-                        <i class="bi bi-card-checklist me-1"></i> Resolución Incidencia #<span id="verModalId"></span>
+                        <i class="bi bi-card-checklist me-1"></i> Resolución de Incidencia #<span id="verModalId"></span>
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
@@ -237,7 +222,7 @@
                     </div>
                     <div>
                         <label class="form-label small text-concordia-dark fw-bold mb-1">
-                            <i class="bi bi-tools text-success me-1"></i> Resolución Aplicada
+                            <i class="bi bi-tools text-success me-1"></i> Solución Aplicada
                         </label>
                         <div id="verModalResolucion" class="p-3 bg-light rounded-3 text-dark border-start border-4 border-success"></div>
                     </div>
@@ -252,7 +237,7 @@
     <!-- Footer Municipal -->
     <footer class="bg-white border-top py-3 mt-auto text-center small text-muted">
         <div class="container">
-            Municipalidad de Concordia &bull; Módulo de Sistemas y Notificaciones &bull; Entre Ríos, Argentina
+            Municipalidad de Concordia &bull; Sistema Integral de Gestión de Incidencias &bull; Entre Ríos, Argentina
         </div>
     </footer>
 

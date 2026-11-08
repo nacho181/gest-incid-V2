@@ -16,8 +16,9 @@ export async function setupTestDb() {
   initialized = true;
 
   try {
-    // Intentar conectar a PostgreSQL real
+    // Intentar conectar a PostgreSQL real y asegurar que los artículos semilla estén activos
     await db.query('SELECT 1');
+    await db.query('UPDATE public.articulos SET activo = 1 WHERE id_articulo IN (1, 2, 3)');
   } catch (err) {
     if (err.code === 'ECONNREFUSED' || err.message.includes('connect ECONNREFUSED')) {
       console.log('[TEST SETUP] Servidor PostgreSQL no detectado. Inicializando base de datos en memoria para pruebas...');

@@ -26,7 +26,7 @@ class ArticuloController {
   }
   async eliminarArticulo(req, res) {
     const articulo = await articuloService.eliminarArticulo(req.params.id);
-    res.status(200).json({ mensaje: 'Artículo dado de baja correctamente (borrado lógico)', articulo });
+    res.status(200).json({ mensaje: 'Artículo dado de baja correctamente', articulo });
   }
   async reactivarArticulo(req, res) {
     const articulo = await articuloService.reactivarArticulo(req.params.id);

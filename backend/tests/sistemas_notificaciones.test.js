@@ -111,8 +111,12 @@ async function runTests() {
       'Authorization': `Bearer ${tokenSistemas}`
     });
     assert.strictEqual(resAsignadas.status, 200);
-    assert.ok(Array.isArray(resAsignadas.body), 'La respuesta debe ser una lista');
-    console.log(`   ✅ Se obtuvieron ${resAsignadas.body.length} incidencias asignadas al técnico.`);
+    const listaAsignadas = Array.isArray(resAsignadas.body) ? resAsignadas.body : resAsignadas.body.data;
+    assert.ok(Array.isArray(listaAsignadas), 'La respuesta debe ser una lista paginada');
+    if (resAsignadas.body.pagination) {
+      assert.strictEqual(typeof resAsignadas.body.pagination.total, 'number');
+    }
+    console.log(`   ✅ Se obtuvieron ${listaAsignadas.length} incidencias asignadas al técnico.`);
 
     // --------------------------------------------------------------------------
     // Test 6: Crear una incidencia y asignarla (pasa a En Proceso)

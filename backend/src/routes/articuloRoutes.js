@@ -5,13 +5,6 @@
  * ============================================================================
  */
 
-/**
- * ============================================================================
- * RUTAS DE LA API - MÓDULO ARTÍCULOS (ENTIDADES BASE)
- * Endpoints REST para BREAD de Artículos
- * ============================================================================
- */
-
 import express from 'express';
 import { body } from 'express-validator';
 import articuloController from '../controllers/articuloController.js';
@@ -31,12 +24,54 @@ const verificarLectura = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.MUN
  * /api/v1/articulos:
  *   get:
  *     tags: [Artículos]
- *     summary: Obtener todos los artículos (Browse)
+ *     summary: Obtener todos los artículos con paginación, orden y filtros en base de datos (Browse)
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página actual
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Cantidad de artículos por página
+ *       - in: query
+ *         name: order_by
+ *         schema:
+ *           type: string
+ *           enum: [id_articulo, descripcion, id_area, id_categoria, activo]
+ *           default: id_articulo
+ *         description: Columna de ordenamiento validada
+ *       - in: query
+ *         name: order_dir
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *           default: ASC
+ *         description: Dirección de ordenamiento
+ *       - in: query
+ *         name: id_categoria
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por ID de categoría
+ *       - in: query
+ *         name: id_area
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por ID de área
+ *       - in: query
+ *         name: buscar
+ *         schema:
+ *           type: string
+ *         description: Término de búsqueda en descripción
  *     responses:
  *       200:
- *         description: Lista de artículos
+ *         description: Lista paginada de artículos con metadata de paginación
  *   post:
  *     tags: [Artículos]
  *     summary: Crear un nuevo artículo (Add)

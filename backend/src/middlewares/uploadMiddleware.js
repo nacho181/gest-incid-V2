@@ -1,14 +1,17 @@
+import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const avatarsDir = path.join(__dirname, '../../public/uploads/avatars');
 
 // Configurar dónde y con qué nombre se guardan los archivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../../public/uploads/avatars'));
+    fs.mkdirSync(avatarsDir, { recursive: true });
+    cb(null, avatarsDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

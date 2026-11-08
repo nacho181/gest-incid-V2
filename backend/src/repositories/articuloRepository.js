@@ -7,45 +7,84 @@
 
 import db from '../config/db.js';
 
+export const ARTICULOS_SORT_MAP = {
+  id: 'art.id_articulo',
+  id_articulo: 'art.id_articulo',
+  descripcion: 'art.descripcion',
+  id_area: 'art.id_area',
+  id_categoria: 'art.id_categoria',
+  activo: 'art.activo',
+  categoria_descripcion: 'cat.descripcion',
+  area_descripcion: 'ar.descripcion'
+};
+
 class ArticuloRepository {
-  async findAll({ traerTodos = false, id_categoria = null, id_area = null, buscar = null } = {}) {
-    let queryText = `
-      SELECT art.id_articulo, art.id_area, art.id_categoria, art.descripcion, art.activo,
-             cat.descripcion AS categoria_descripcion,
-             ar.descripcion AS area_descripcion
+  /**
+   * Consulta paginada con LIMIT, OFFSET, conteo total y ordenamiento seguro en base de datos.
+   */
+  async findAllPaginated({
+    traerTodos = false,
+    id_categoria = null,
+    id_area = null,
+    buscar = null,
+    limit = 10,
+    offset = 0,
+    sortSql = 'art.id_articulo ASC'
+  } = {}) {
+    const fromAndWhere = `
       FROM public.articulos art
       LEFT JOIN public.categorias cat ON art.id_categoria = cat.id_categoria
       LEFT JOIN public.areas ar ON art.id_area = ar.id_area
       WHERE 1=1
     `;
     const params = [];
+    let filterClauses = '';
 
     if (!traerTodos) {
       params.push(1);
-      queryText += ` AND art.activo = $${params.length}`;
+      filterClauses += ` AND art.activo = $${params.length}`;
     }
 
     if (id_categoria) {
       params.push(parseInt(id_categoria, 10));
-      queryText += ` AND art.id_categoria = $${params.length}`;
+      filterClauses += ` AND art.id_categoria = $${params.length}`;
     }
 
     if (id_area) {
       params.push(parseInt(id_area, 10));
-      queryText += ` AND art.id_area = $${params.length}`;
+      filterClauses += ` AND art.id_area = $${params.length}`;
     }
 
     if (buscar) {
       params.push(`%${buscar.trim()}%`);
-      queryText += ` AND art.descripcion ILIKE $${params.length}`;
+      filterClauses += ` AND (art.descripcion ILIKE $${params.length} OR cat.descripcion ILIKE $${params.length} OR ar.descripcion ILIKE $${params.length})`;
     }
 
-    queryText += ` ORDER BY art.id_articulo ASC`;
+    // 1. Conteo total de registros que cumplen los filtros (sin LIMIT ni OFFSET)
+    const countSql = `SELECT COUNT(*)::int AS total ${fromAndWhere} ${filterClauses}`;
+    const countResult = await db.query(countSql, params);
+    const total = countResult.rows[0]?.total || 0;
 
-    const { rows } = await db.query(queryText, params);
-    return rows;
+    // 2. Consulta de registros con ordenamiento y paginación LIMIT / OFFSET
+    const dataParams = [...params];
+    dataParams.push(limit);
+    const limitPlaceholder = `$${dataParams.length}`;
+    dataParams.push(offset);
+    const offsetPlaceholder = `$${dataParams.length}`;
+
+    const dataSql = `
+      SELECT art.id_articulo, art.id_area, art.id_categoria, art.descripcion, art.activo,
+             cat.descripcion AS categoria_descripcion,
+             ar.descripcion AS area_descripcion
+      ${fromAndWhere} ${filterClauses}
+      ORDER BY ${sortSql}
+      LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}
+    `;
+
+    const { rows } = await db.query(dataSql, dataParams);
+    return { rows, total };
   }
-  
+
   async existeActivo(idArticulo, executor = db) {
     const { rows } = await executor.query(
       'SELECT 1 FROM public.articulos WHERE id_articulo = $1 AND activo = 1',

@@ -9,7 +9,7 @@ import areaService from '../services/areaService.js';
 import { wrapController } from '../utils/asyncHandler.js';
 
 class AreaController {
-  async getAreas(req, res) { res.status(200).json(await areaService.getAreas()); }
+  async getAreas(req, res) { res.status(200).json(await areaService.getAreas(req.query)); }
 }
 
 export default wrapController(new AreaController());

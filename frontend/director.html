@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Municipalidad de Concordia - Panel Director de Sistemas</title>
+    <title>Municipalidad de Concordia - Panel de Dirección de Sistemas</title>
 
     <!-- Hoja de estilos personalizada -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body class="d-flex flex-column min-vh-100 bg-light">
 
     <!-- ========================================================================= -->
@@ -17,14 +19,16 @@
         <div class="container d-flex flex-wrap justify-content-between align-items-center">
             <!-- Marca e Identidad Institucional -->
             <div class="d-flex align-items-center gap-3">
-                <a href="index.html" class="badge-logo bg-concordia-light text-white fw-bold px-3 py-2 rounded text-decoration-none logo-mc-interactive" title="Volver al Inicio">MC</a>
+                <a href="index.html"
+                    class="badge-logo bg-concordia-light text-white fw-bold px-3 py-2 rounded text-decoration-none logo-mc-interactive"
+                    title="Volver al Inicio">MC</a>
                 <div>
                     <h1 class="h5 mb-0 fw-bold text-white">Municipalidad de Concordia</h1>
-                    <span class="small text-concordia-accent">Área de Sistemas • Panel del Director</span>
+                    <span class="small text-concordia-accent">Área de Sistemas • Panel de Dirección</span>
                 </div>
             </div>
 
-            <!-- Navegación de Roles y Token JWT Status -->
+            <!-- Navegación y Perfil de Usuario -->
             <div class="d-flex align-items-center gap-3 mt-2 mt-sm-0">
                 <div class="text-white text-end">
                     <div id="lblDirectorNombre" class="fw-bold small leading-tight">Director de Sistemas</div>
@@ -44,12 +48,14 @@
 
         <!-- Contenedor para Notificaciones Emergentes (Toast) -->
         <div class="toast-container position-fixed bottom-0 end-0 p-3">
-            <div id="toast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div id="toast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive"
+                aria-atomic="true">
                 <div class="d-flex">
                     <div id="toastBody" class="toast-body fw-semibold">
                         Notificación
                     </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                        aria-label="Cerrar"></button>
                 </div>
             </div>
         </div>
@@ -59,7 +65,8 @@
             <div class="card-body p-0 d-flex flex-wrap justify-content-between align-items-center">
                 <div>
                     <h2 class="h4 fw-bold mb-1">Panel de Control y Supervisión General</h2>
-                    <p class="mb-0 text-white-50">Resumen ejecutivo, asignación de incidencias técnicas y reportes estadísticos</p>
+                    <p class="mb-0 text-white-50">Resumen operativo, asignación de técnicos responsables y exportación
+                        de informes estadísticos</p>
                 </div>
             </div>
         </section>
@@ -67,18 +74,21 @@
         <!-- Pestañas del Panel de Director -->
         <ul class="nav nav-tabs border-bottom-2 mb-4" id="directorTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold text-concordia" id="btn-tab-dashboard" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button" role="tab">
-                    Dashboard de Resumen
+                <button class="nav-link active fw-bold text-concordia" id="btn-tab-dashboard" data-bs-toggle="tab"
+                    data-bs-target="#tab-dashboard" type="button" role="tab">
+                    <i class="bi bi-speedometer2 me-1"></i> Resumen General
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-muted" id="btn-tab-gestion" data-bs-toggle="tab" data-bs-target="#tab-gestion" type="button" role="tab">
-                    Gestión y Asignación
+                <button class="nav-link fw-bold text-muted" id="btn-tab-gestion" data-bs-toggle="tab"
+                    data-bs-target="#tab-gestion" type="button" role="tab">
+                    <i class="bi bi-kanban me-1"></i> Gestión y Asignación
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold text-muted" id="btn-tab-reportes" data-bs-toggle="tab" data-bs-target="#tab-reportes" type="button" role="tab">
-                    Estadísticas y Reportes
+                <button class="nav-link fw-bold text-muted" id="btn-tab-reportes" data-bs-toggle="tab"
+                    data-bs-target="#tab-reportes" type="button" role="tab">
+                    <i class="bi bi-file-earmark-bar-graph me-1"></i> Exportar Reportes
                 </button>
             </li>
         </ul>
@@ -92,7 +102,7 @@
             <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel">
 
                 <!-- 1.1 Totales según Estados -->
-                <h3 class="h6 fw-bold text-concordia-dark mb-3">Totales de Incidencias por Estado</h3>
+                <h3 class="h6 fw-bold text-concordia-dark mb-3">Distribución de Incidencias por Estado</h3>
                 <div class="row g-3 mb-4" id="cardsEstadosContainer">
                     <div class="col-md-3">
                         <div class="card border-0 shadow-sm p-3 bg-warning bg-opacity-10 rounded-3">
@@ -108,7 +118,7 @@
                     </div>
                     <div class="col-md-3">
                         <div class="card border-0 shadow-sm p-3 bg-success bg-opacity-10 rounded-3">
-                            <span class="small text-muted fw-semibold">Resueltas / Finalizadas</span>
+                            <span class="small text-muted fw-semibold">Resueltas</span>
                             <h4 id="cantResueltas" class="fw-bold text-dark mb-0">0</h4>
                         </div>
                     </div>
@@ -124,7 +134,7 @@
                     <!-- 1.2 Totales por Fecha -->
                     <div class="col-lg-5">
                         <div class="card border-0 shadow-sm rounded-3 p-3 h-100">
-                            <h4 class="h6 fw-bold text-concordia-dark mb-3">Totales por Fecha de Reporte</h4>
+                            <h4 class="h6 fw-bold text-concordia-dark mb-3">Total de Registros por Fecha</h4>
                             <div class="table-responsive">
                                 <table class="table table-sm table-hover align-middle mb-0">
                                     <thead class="table-concordia">
@@ -135,7 +145,8 @@
                                     </thead>
                                     <tbody id="tbodyTotalesFecha">
                                         <tr>
-                                            <td colspan="2" class="text-center text-muted">Cargando datos por fecha...</td>
+                                            <td colspan="2" class="text-center text-muted">Cargando datos por fecha...
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -145,25 +156,46 @@
 
                     <!-- 1.3 Incidencias Prioritarias destacados (Prioridad 1 = Alta) -->
                     <div class="col-lg-7">
-                        <div class="card border-0 shadow-sm rounded-3 p-3 h-100">
-                            <h4 class="h6 fw-bold text-danger mb-3">Incidencias Prioritarias (Alta Prioridad)</h4>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover align-middle mb-0">
-                                    <thead class="table-concordia">
-                                        <tr>
-                                            <th># ID</th>
-                                            <th>Fecha</th>
-                                            <th>Artículo / Pedido</th>
-                                            <th>Estado</th>
-                                            <th>Asignado A</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbodyPrioritarias">
-                                        <tr>
-                                            <td colspan="5" class="text-center text-muted">Cargando incidencias prioritarias...</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                        <div
+                            class="card border-0 shadow-sm rounded-3 p-3 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div>
+                                        <h4 class="h6 fw-bold text-danger mb-0 d-flex align-items-center gap-2">
+                                            <i class="bi bi-exclamation-triangle-fill"></i>
+                                            Incidencias Urgentes
+                                        </h4>
+                                        <div class="text-muted small">Principales incidentes que requieren atención
+                                            inmediata</div>
+                                    </div>
+                                </div>
+                                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover align-middle mb-0">
+                                        <thead class="table-concordia sticky-top">
+                                            <tr>
+                                                <th style="width: 90px;">N° Ticket</th>
+                                                <th>Fecha</th>
+                                                <th>Equipo / Problema</th>
+                                                <th>Estado</th>
+                                                <th>Técnico Responsable</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyPrioritarias">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">Cargando incidencias
+                                                    prioritarias...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div
+                                class="card-footer bg-white border-top px-0 pb-0 pt-2 text-muted small d-flex justify-content-between align-items-center mt-2">
+                                <span>Incidentes de alta prioridad que requieren atención inmediata.</span>
+                                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 fw-semibold"
+                                    id="btnVerTodasGestion">
+                                    Ver todas las incidencias &rarr;
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -176,10 +208,14 @@
             <!-- ========================================================================= -->
             <div class="tab-pane fade" id="tab-gestion" role="tabpanel">
                 <div class="card border-0 shadow-sm rounded-3 p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="h5 fw-bold text-concordia-dark mb-0">Asignación de Personal de Sistemas y Soft Delete</h3>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div>
+                            <h3 class="h5 fw-bold text-concordia-dark mb-0">Gestión y Asignación de Responsables</h3>
+                            <span class="small text-muted">Asigne personal técnico a las solicitudes o cancele
+                                incidencias que no correspondan</span>
+                        </div>
                         <button id="btnRefreshGestion" class="btn btn-sm btn-outline-concordia fw-semibold">
-                            Actualizar Listado
+                            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
                         </button>
                     </div>
 
@@ -187,13 +223,13 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-concordia">
                                 <tr>
-                                    <th># ID</th>
-                                    <th>Creado Por</th>
-                                    <th>Artículo</th>
-                                    <th>Descripción</th>
+                                    <th style="width: 90px;">N° Ticket</th>
+                                    <th>Reportado por</th>
+                                    <th>Equipo / Artículo</th>
+                                    <th>Descripción del Problema</th>
                                     <th>Prioridad</th>
                                     <th>Estado</th>
-                                    <th>Asignado A</th>
+                                    <th>Técnico Responsable</th>
                                     <th class="text-end">Acciones</th>
                                 </tr>
                             </thead>
@@ -204,57 +240,76 @@
                             </tbody>
                         </table>
                     </div>
+                    <!-- Barra de Paginación Interactiva de Gestión -->
+                    <div
+                        class="card-footer bg-white border-top d-flex flex-column flex-md-row justify-content-between align-items-center py-2 px-0 gap-2 mt-3">
+                        <span class="text-muted small" id="lblInfoPaginacionDirector">Cargando paginación...</span>
+                        <nav aria-label="Navegación de páginas de gestión de incidencias">
+                            <ul class="pagination pagination-sm mb-0" id="paginacionDirector"></ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
 
             <!-- ========================================================================= -->
-            <!-- PESTAÑA 3: ESTADÍSTICAS Y PLANTILLA DE REPORTE PARA PDF                   -->
+            <!-- PESTAÑA 3: ESTADÍSTICAS Y REPORTE OFICIAL EN PDF                          -->
             <!-- ========================================================================= -->
             <div class="tab-pane fade" id="tab-reportes" role="tabpanel">
 
-                <!-- Área imprimible para el PDF -->
-                <div id="areaReportePDF" class="card border-0 shadow-sm rounded-3 p-4 bg-white">
-                    <div class="border-bottom pb-3 mb-4 d-flex justify-content-between align-items-center">
+                <!-- Panel de Configuración y Filtros del Reporte PDF -->
+                <div class="card border-0 shadow-sm rounded-3 p-4 mb-4 bg-white">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 border-bottom pb-2">
                         <div>
-                            <h2 class="h4 fw-bold text-concordia-dark mb-1">MUNICIPALIDAD DE CONCORDIA</h2>
-                            <p class="small text-muted mb-0">Dirección del Área de Sistemas — Reporte Estadístico de Incidencias Técnicas</p>
+                            <h3 class="h5 fw-bold text-concordia-dark mb-0">Exportar Reporte Estadístico</h3>
+                            <span class="small text-muted">Descargue un informe consolidado en formato PDF con los
+                                filtros seleccionados</span>
                         </div>
-                        <div class="text-end d-flex flex-column align-items-end gap-2">
-                            <span id="reporteFechaEmision" class="small text-muted">Fecha de emisión: --/--/----</span>
-                            <button id="btnGenerarPDF" class="btn btn-sm btn-concordia fw-bold shadow-sm" data-html2pdf-ignore="true">
-                                Generar Reporte Estadístico (PDF)
+                        <span id="reporteFechaEmision" class="small text-muted mt-2 mt-sm-0">Fecha de emisión:
+                            --/--/----</span>
+                    </div>
+
+                    <form id="formFiltrosReportePDF" class="row g-3 align-items-end" onsubmit="return false;">
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <label for="filtroReporteDesde" class="form-label small fw-semibold text-muted">Fecha
+                                Desde</label>
+                            <input type="date" id="filtroReporteDesde" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <label for="filtroReporteHasta" class="form-label small fw-semibold text-muted">Fecha
+                                Hasta</label>
+                            <input type="date" id="filtroReporteHasta" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <label for="filtroReporteEstado"
+                                class="form-label small fw-semibold text-muted">Estado</label>
+                            <select id="filtroReporteEstado" class="form-select form-select-sm">
+                                <option value="">Todos los Estados</option>
+                                <option value="1">Pendiente</option>
+                                <option value="2">En Proceso</option>
+                                <option value="3">Resuelta</option>
+                                <option value="4">Cancelada</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <label for="filtroReporteTecnico" class="form-label small fw-semibold text-muted">Técnico
+                                Responsable</label>
+                            <select id="filtroReporteTecnico" class="form-select form-select-sm">
+                                <option value="">Todos los Técnicos</option>
+                                <option value="0">Sin Asignar</option>
+                            </select>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end gap-2 pt-2">
+                            <button type="button" id="btnLimpiarFiltrosReporte"
+                                class="btn btn-sm btn-outline-secondary fw-semibold">
+                                Limpiar Filtros
+                            </button>
+                            <button type="button" id="btnGenerarPDF" class="btn btn-sm btn-concordia fw-bold shadow-sm">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> Descargar Reporte PDF
                             </button>
                         </div>
-                    </div>
-
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded text-center bg-light">
-                                <span class="small text-muted fw-semibold">Total Historico de Incidencias</span>
-                                <h3 id="repTotalIncidencias" class="fw-bold text-concordia-dark mb-0">0</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="p-3 border rounded">
-                                <h5 class="h6 fw-bold mb-3">Distribución por Área Solicitante</h5>
-                                <div id="repContenidoAreas" class="row g-2">
-                                    <div class="col-12 text-muted small">Cargando distribución por áreas...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="p-3 border rounded">
-                        <h5 class="h6 fw-bold mb-3">Distribución por Categoria de Artículo</h5>
-                        <div id="repContenidoCategorias" class="row g-2">
-                            <div class="col-12 text-muted small">Cargando distribución por categorías...</div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 pt-3 border-top text-center small text-muted">
-                        Documento oficial generado en la Intranet de la Municipalidad de Concordia (Entre Ríos).
-                    </div>
+                    </form>
                 </div>
+
 
             </div>
 
@@ -265,23 +320,56 @@
     <!-- Modal para Asignar Empleado de Sistemas -->
     <div class="modal fade" id="modalAsignar" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-concordia-dark text-white">
-                    <h5 class="modal-title h6 fw-bold">Asignar Incidencia Tecnicas</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-concordia-dark text-white rounded-top-4">
+                    <h5 class="modal-title h6 fw-bold">
+                        <i class="bi bi-person-check me-1"></i> Asignar Técnico Responsable
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body">
-                    <p class="small text-muted">Selecciona el técnico o empleado del área de Sistemas que se hará cargo de resolver la incidencia <strong id="modalIncidenciaId">#0</strong>.</p>
+                <div class="modal-body p-4">
+                    <p class="small text-muted">Seleccione el técnico del área de Sistemas que asumirá la resolución de
+                        la incidencia <strong id="modalIncidenciaId">#0</strong>.</p>
                     <div class="mb-3">
-                        <label for="selectSistemasEmpleado" class="form-label fw-semibold">Empleado de Sistemas *</label>
+                        <label for="selectSistemasEmpleado" class="form-label fw-semibold">Técnico Responsable *</label>
                         <select id="selectSistemasEmpleado" class="form-select" required>
                             <option value="">-- Seleccionar Técnico --</option>
                         </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-                    <button id="btnConfirmarAsignacion" type="button" class="btn btn-concordia btn-sm">Confirmar Asignación</button>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold"
+                        data-bs-dismiss="modal">Cancelar</button>
+                    <button id="btnConfirmarAsignacion" type="button" class="btn btn-concordia btn-sm fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i> Confirmar Asignación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación para Cancelar Incidencia (Director) -->
+    <div class="modal fade" id="modalConfirmarCancelacionDirector" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-danger text-white rounded-top-4">
+                    <h5 class="modal-title h6 fw-bold">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Confirmar Cancelación de Solicitud
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-2">¿Está seguro de que desea cancelar la incidencia <strong id="lblDirectorCancelarId">#0</strong>?</p>
+                    <p class="small text-muted mb-0">Esta acción cambiará su estado a cancelada y notificará al solicitante.</p>
+                </div>
+                <div class="modal-footer bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-outline-secondary btn-sm fw-semibold"
+                        data-bs-dismiss="modal">Volver</button>
+                    <button id="btnConfirmarCancelacionDirector" type="button" class="btn btn-danger btn-sm fw-bold">
+                        <i class="bi bi-x-circle me-1"></i> Sí, cancelar incidencia
+                    </button>
                 </div>
             </div>
         </div>
@@ -290,10 +378,11 @@
     <!-- Pie de Página -->
     <footer class="footer bg-dark text-light py-3 mt-auto">
         <div class="container text-center small text-white-50">
-            &copy; 2025 Municipalidad de Concordia - Entre Ríos. Panel del Director de Sistemas.
+            &copy; 2026 Municipalidad de Concordia - Entre Ríos. Panel de Dirección de Sistemas.
         </div>
     </footer>
 
     <script type="module" src="js/director.js"></script>
 </body>
+
 </html>

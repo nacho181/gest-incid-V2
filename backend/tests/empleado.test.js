@@ -72,11 +72,16 @@ async function runTests() {
     const resEmp = await request('GET', '/api/v1/usuarios?rol=2', null, authHeaders);
     assert.strictEqual(resEmp.status, 403);
 
-    // Pruebas 3: Obtener lista de artículos
-    console.log('Test 3: Lista de artículos...');
+    // Pruebas 3: Obtener lista de artículos con paginación
+    console.log('Test 3: Lista de artículos con estructura paginada...');
     const resArt = await request('GET', '/api/v1/articulos', null, authHeaders);
     assert.strictEqual(resArt.status, 200);
-    assert.strictEqual(Array.isArray(resArt.body), true);
+    const articulos = Array.isArray(resArt.body) ? resArt.body : resArt.body.data;
+    assert.strictEqual(Array.isArray(articulos), true);
+    if (resArt.body.pagination) {
+      assert.strictEqual(typeof resArt.body.pagination.total, 'number');
+      assert.strictEqual(resArt.body.pagination.page, 1);
+    }
 
     // Pruebas 4: Crear una incidencia para el usuario Esteban Reniero (ID 4)
     console.log('Test 4: Crear incidencia...');
@@ -89,9 +94,15 @@ async function runTests() {
     assert.strictEqual(resCreate.body.incidencia.asignado_a, 0, 'Nueva incidencia debe tener asignado_a = 0 (usuario comodín Sin Asignar)');
 
     // Pruebas 5: Listar incidencias creadas por el usuario autenticado
-    console.log('Test 5: Listar mis incidencias...');
-    const resInc = await request('GET', '/api/v1/incidencias', null, authHeaders);    assert.strictEqual(resInc.status, 200);
-    assert.strictEqual(Array.isArray(resInc.body), true);
+    console.log('Test 5: Listar mis incidencias con paginación...');
+    const resInc = await request('GET', '/api/v1/incidencias', null, authHeaders);
+    assert.strictEqual(resInc.status, 200);
+    const incidencias = Array.isArray(resInc.body) ? resInc.body : resInc.body.data;
+    assert.strictEqual(Array.isArray(incidencias), true);
+    if (resInc.body.pagination) {
+      assert.strictEqual(typeof resInc.body.pagination.total, 'number');
+      assert.strictEqual(resInc.body.pagination.page, 1);
+    }
 
     // Pruebas 6: Cancelar la incidencia creada por el usuario autenticado
     console.log('Test 6: Cancelar incidencia pendiente...');

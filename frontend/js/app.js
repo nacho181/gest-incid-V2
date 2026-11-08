@@ -18,13 +18,25 @@ let authToken = localStorage.getItem('jwt_token') || null;
 // Caché local para filtrado de artículos
 let listaArticulosCache = [];
 let bsToast = null;
+let modalCancelarBs = null;
+let idIncidenciaACancelar = null;
 let tomSelectArticulo = null;
 
+// Paginación de Mis Incidencias
+let paginaActualMisIncidencias = 1;
+const limiteMisIncidencias = 10;
+let totalRegistrosMisIncidencias = 0;
+let totalPaginasMisIncidencias = 1;
+
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Inicializar Toast de Bootstrap
+    // 1. Inicializar Toast y Modal de Bootstrap
     const toastEl = document.getElementById('toast');
     if (toastEl && window.bootstrap) {
         bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
+    }
+    const modalCancelEl = document.getElementById('modalConfirmarCancelacion');
+    if (modalCancelEl && window.bootstrap) {
+        modalCancelarBs = new bootstrap.Modal(modalCancelEl);
     }
 
     // 2. Registrar eventos generales
@@ -85,7 +97,8 @@ function setupEventListeners() {
     // Refrescar incidencias
     const btnRefresh = document.getElementById('btnRefreshIncidencias');
     if (btnRefresh) {
-        btnRefresh.addEventListener('click', () => {
+        btnRefresh.addEventListener('click', (e) => {
+            e.currentTarget?.blur();
             cargarMisIncidencias();
             mostrarToast('Lista de incidencias actualizada', 'info');
         });
@@ -129,9 +142,14 @@ function setupEventListeners() {
             const action = btn.dataset.action;
             const id = btn.dataset.id;
             if (action === 'cancelar' && id) {
-                cancelarIncidencia(parseInt(id, 10));
+                solicitarCancelacionIncidencia(parseInt(id, 10));
             }
         });
+    }
+
+    const btnConfirmarCancel = document.getElementById('btnConfirmarCancelacionModal');
+    if (btnConfirmarCancel) {
+        btnConfirmarCancel.addEventListener('click', ejecutarCancelacionIncidencia);
     }
 }
 
@@ -146,7 +164,7 @@ async function manejarLogin(e) {
     const btnSubmit = document.getElementById('btnSubmitLogin');
 
     if (!usuarioInput || !contraseniaInput) {
-        mostrarToast('Por favor ingrese usuario y contraseña', 'error');
+        mostrarToast('Por favor, ingrese su usuario y contraseña.', 'error');
         return;
     }
 
@@ -163,7 +181,7 @@ async function manejarLogin(e) {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.mensaje || data.error || 'Credenciales inválidas');
+            throw new Error(data.mensaje || data.error || 'Credenciales incorrectas. Verifique los datos ingresados.');
         }
 
         // Guardar token y datos del usuario en localStorage
@@ -174,7 +192,7 @@ async function manejarLogin(e) {
         localStorage.setItem('user_data', JSON.stringify(currentUser));
         localStorage.setItem('usuario', JSON.stringify(currentUser));
 
-        mostrarToast(`Bienvenido/a, ${currentUser.nombres}!`, 'exito');
+        mostrarToast(`¡Bienvenido/a, ${currentUser.nombres}!`, 'exito');
         document.getElementById('formLogin').reset();
 
         if (currentUser.rol === 1) {
@@ -220,7 +238,6 @@ async function verificarSesion() {
         authToken = savedToken;
         mostrarVistaAutenticada();
     } catch (error) {
-        console.warn('Token no válido o expirado:', error);
         cerrarSesion();
     }
 }
@@ -236,7 +253,7 @@ function cerrarSesion() {
     authToken = null;
     currentUser = null;
     mostrarVistaLogin();
-    mostrarToast('Sesión cerrada correctamente', 'info');
+    mostrarToast('Sesión cerrada correctamente.', 'info');
 }
 
 /**
@@ -369,7 +386,7 @@ async function cargarArticulos() {
             listaArticulosCache.forEach(art => {
                 const option = document.createElement('option');
                 option.value = art.id_articulo;
-                option.textContent = `${art.descripcion} - [Cat: ${art.categoria_descripcion || art.categoria_nombre || 'Gral'}]`;
+                option.textContent = `${art.descripcion} (${art.categoria_descripcion || art.categoria_nombre || 'General'})`;
                 selectArticulo.appendChild(option);
             });
 
@@ -403,14 +420,14 @@ function renderizarGridArticulos(articulos) {
             <div class="card card-articulo h-100 shadow-sm rounded-3">
                 <div class="card-body d-flex flex-column">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="badge bg-concordia-light text-white">${escapeHtml(art.categoria_descripcion || art.categoria_nombre || 'Artículo')}</span>
-                        <small class="text-muted">ID: #${art.id_articulo}</small>
+                        <span class="badge bg-concordia-light text-white">${escapeHtml(art.categoria_descripcion || art.categoria_nombre || 'Equipamiento')}</span>
+                        <small class="text-muted">Código N.º ${art.id_articulo}</small>
                     </div>
                     <h5 class="card-title fw-bold text-concordia-dark mb-1">${escapeHtml(art.descripcion)}</h5>
                     <p class="card-text small text-muted mb-3">Área asignada: <strong>${escapeHtml(art.area_descripcion || art.area_nombre || 'General')}</strong></p>
                     <div class="mt-auto">
                         <button data-action="reportar-falla" data-id="${art.id_articulo}" class="btn btn-sm btn-outline-concordia w-100 fw-semibold btn-reportar-falla">
-                            Reportar Falla
+                            <i class="bi bi-plus-circle me-1"></i> Reportar Incidencia
                         </button>
                     </div>
                 </div>
@@ -451,29 +468,41 @@ function seleccionarArticuloParaIncidencia(idArticulo) {
         tabTrigger.show();
     }
 
-    mostrarToast('Artículo seleccionado. Describe la falla a continuación.', 'info');
+    mostrarToast('Equipo seleccionado. Por favor, describa el inconveniente.', 'info');
 }
 
 /**
- * Consulta y carga las incidencias creadas por el usuario autenticado.
- * GET /incidencias devuelve, según el rol del token, las incidencias propias.
+ * Consulta y carga las incidencias creadas por el usuario autenticado con paginación LIMIT/OFFSET.
+ * GET /incidencias o /incidencias/mis-incidencias
  */
-async function cargarMisIncidencias() {
+async function cargarMisIncidencias(pagina = 1) {
+    paginaActualMisIncidencias = pagina;
     const tbody = document.getElementById('tbodyIncidencias');
     if (!tbody || !currentUser) return;
 
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Cargando incidencias...</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-concordia me-2"></div>Cargando incidencias...</td></tr>`;
 
     try {
-        const response = await fetchConAuth(`${API_BASE_URL}/incidencias`);
+        const response = await fetchConAuth(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteMisIncidencias}`);
         if (!response.ok) throw new Error('Error al obtener incidencias');
 
         const result = await response.json();
         const incidencias = Array.isArray(result) ? result : (result.data || []);
+        const pagination = result.pagination || {
+            total: incidencias.length,
+            page: pagina,
+            limit: limiteMisIncidencias,
+            total_pages: Math.ceil(incidencias.length / limiteMisIncidencias) || 1
+        };
+
+        totalRegistrosMisIncidencias = pagination.total;
+        totalPaginasMisIncidencias = pagination.total_pages || 1;
+
         tbody.innerHTML = '';
 
         if (incidencias.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No tienes incidencias registradas.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No registra incidencias reportadas hasta el momento.</td></tr>`;
+            actualizarPaginadorMisIncidencias();
             return;
         }
 
@@ -515,7 +544,7 @@ async function cargarMisIncidencias() {
             tr.innerHTML = `
                 <td class="fw-bold">#${inc.id_incidencia}</td>
                 <td class="small">${fechaFormateada}</td>
-                <td class="fw-semibold">${escapeHtml(inc.articulo_descripcion || inc.articulo_nombre || 'Artículo #' + inc.id_articulo)}</td>
+                <td class="fw-semibold">${escapeHtml(inc.articulo_descripcion || inc.articulo_nombre || 'Equipo #' + inc.id_articulo)}</td>
                 <td class="small text-wrap" style="max-width: 250px;">${escapeHtml(inc.descripcion_pedido || '')}</td>
                 <td>${badgePrioridad}</td>
                 <td>${badgeEstado}</td>
@@ -525,10 +554,114 @@ async function cargarMisIncidencias() {
             tbody.appendChild(tr);
         });
 
+        actualizarPaginadorMisIncidencias();
+
     } catch (error) {
         console.error('Error cargando incidencias:', error);
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Error al cargar incidencias.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Ocurrió un error al cargar sus incidencias. Por favor, intente nuevamente.</td></tr>`;
     }
+}
+
+function actualizarPaginadorMisIncidencias() {
+    const ulPag = document.getElementById('paginacionMisIncidencias');
+    const lblInfo = document.getElementById('lblInfoPaginacionMisIncidencias');
+
+    renderizarPaginador({
+        ulElement: ulPag,
+        infoElement: lblInfo,
+        total: totalRegistrosMisIncidencias,
+        page: paginaActualMisIncidencias,
+        limit: limiteMisIncidencias,
+        totalPages: totalPaginasMisIncidencias,
+        onCambiarPagina: (p) => cargarMisIncidencias(p),
+        singular: 'incidencia',
+        plural: 'incidencias'
+    });
+}
+
+function renderizarPaginador({ ulElement, infoElement, total, page, limit, totalPages, onCambiarPagina, singular = 'registro', plural = 'registros' }) {
+    if (!ulElement) return;
+    ulElement.innerHTML = '';
+
+    const totalNum = parseInt(total, 10) || 0;
+    const pagActual = parseInt(page, 10) || 1;
+    const cantPaginas = parseInt(totalPages, 10) || 1;
+
+    if (infoElement) {
+        if (totalNum === 0) {
+            infoElement.textContent = `No se encontraron ${plural}`;
+        } else {
+            const desde = (pagActual - 1) * limit + 1;
+            const hasta = Math.min(pagActual * limit, totalNum);
+            infoElement.textContent = `Mostrando ${desde} a ${hasta} de ${totalNum} ${totalNum === 1 ? singular : plural}`;
+        }
+    }
+
+    if (cantPaginas <= 1) return;
+
+    // Botón Anterior
+    const liPrev = document.createElement('li');
+    liPrev.className = `page-item ${pagActual <= 1 ? 'disabled' : ''}`;
+    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">&laquo;</button>`;
+    if (pagActual > 1) {
+        liPrev.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual - 1));
+    }
+    ulElement.appendChild(liPrev);
+
+    let inicio = Math.max(1, pagActual - 2);
+    let fin = Math.min(cantPaginas, inicio + 4);
+    if (fin - inicio < 4) {
+        inicio = Math.max(1, fin - 4);
+    }
+
+    if (inicio > 1) {
+        const li1 = document.createElement('li');
+        li1.className = 'page-item';
+        li1.innerHTML = `<button class="page-link" type="button">1</button>`;
+        li1.querySelector('button').addEventListener('click', () => onCambiarPagina(1));
+        ulElement.appendChild(li1);
+
+        if (inicio > 2) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ulElement.appendChild(liDots);
+        }
+    }
+
+    for (let i = inicio; i <= fin; i++) {
+        const li = document.createElement('li');
+        li.className = `page-item ${i === pagActual ? 'active' : ''}`;
+        li.innerHTML = `<button class="page-link" type="button">${i}</button>`;
+        if (i !== pagActual) {
+            const n = i;
+            li.querySelector('button').addEventListener('click', () => onCambiarPagina(n));
+        }
+        ulElement.appendChild(li);
+    }
+
+    if (fin < cantPaginas) {
+        if (fin < cantPaginas - 1) {
+            const liDots = document.createElement('li');
+            liDots.className = 'page-item disabled';
+            liDots.innerHTML = `<span class="page-link">...</span>`;
+            ulElement.appendChild(liDots);
+        }
+        const liFin = document.createElement('li');
+        liFin.className = 'page-item';
+        liFin.innerHTML = `<button class="page-link" type="button">${cantPaginas}</button>`;
+        liFin.querySelector('button').addEventListener('click', () => onCambiarPagina(cantPaginas));
+        ulElement.appendChild(liFin);
+    }
+
+    // Botón Siguiente
+    const liNext = document.createElement('li');
+    liNext.className = `page-item ${pagActual >= cantPaginas ? 'disabled' : ''}`;
+    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">&raquo;</button>`;
+    if (pagActual < cantPaginas) {
+        liNext.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual + 1));
+    }
+    ulElement.appendChild(liNext);
 }
 
 /**
@@ -538,7 +671,7 @@ async function crearIncidencia(e) {
     e.preventDefault();
 
     if (!currentUser) {
-        mostrarToast('Debes iniciar sesión para reportar una incidencia', 'error');
+        mostrarToast('Debe iniciar sesión para reportar una incidencia.', 'error');
         return;
     }
 
@@ -551,7 +684,7 @@ async function crearIncidencia(e) {
     const descripcion_pedido = document.getElementById('txtDescripcion').value.trim();
 
     if (!id_articulo || !descripcion_pedido) {
-        mostrarToast('Por favor completa todos los campos requeridos.', 'error');
+        mostrarToast('Por favor, complete todos los campos obligatorios.', 'error');
         return;
     }
 
@@ -568,10 +701,10 @@ async function crearIncidencia(e) {
 
         if (!response.ok) {
             const errData = await response.json();
-            throw new Error(errData.mensaje || errData.error || 'Error al crear la incidencia');
+            throw new Error(errData.mensaje || errData.error || 'Ocurrió un error al registrar la incidencia. Por favor, intente nuevamente.');
         }
 
-        mostrarToast('¡Incidencia creada exitosamente!', 'exito');
+        mostrarToast('¡Incidencia registrada con éxito!', 'exito');
         document.getElementById('formNuevaIncidencia').reset();
         if (tomSelectArticulo) {
             tomSelectArticulo.clear();
@@ -591,13 +724,22 @@ async function crearIncidencia(e) {
 }
 
 /**
+ * Abre el modal de confirmación para cancelar una incidencia en estado Pendiente.
+ */
+function solicitarCancelacionIncidencia(idIncidencia) {
+    idIncidenciaACancelar = idIncidencia;
+    const lbl = document.getElementById('lblIncidenciaCancelarId');
+    if (lbl) lbl.textContent = `#${idIncidencia}`;
+    if (modalCancelarBs) modalCancelarBs.show();
+}
+
+/**
  * Cancela una incidencia en estado Pendiente.
  * PATCH /incidencias/:id con { id_estado: 4 } (cancelada).
  */
-async function cancelarIncidencia(idIncidencia) {
-    if (!confirm(`¿Estás seguro de que deseas cancelar la incidencia #${idIncidencia}?`)) {
-        return;
-    }
+async function ejecutarCancelacionIncidencia() {
+    if (!idIncidenciaACancelar) return;
+    const idIncidencia = idIncidenciaACancelar;
 
     try {
         const response = await fetchConAuth(`${API_BASE_URL}/incidencias/${idIncidencia}`, {
@@ -609,15 +751,18 @@ async function cancelarIncidencia(idIncidencia) {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.mensaje || data.error || 'No se pudo cancelar la incidencia');
+            throw new Error(data.mensaje || data.error || 'No fue posible cancelar la incidencia. Por favor, intente nuevamente.');
         }
 
-        mostrarToast(`Incidencia #${idIncidencia} cancelada correctamente.`, 'exito');
-        await cargarMisIncidencias();
+        if (modalCancelarBs) modalCancelarBs.hide();
+        mostrarToast(`Solicitud #${idIncidencia} cancelada correctamente.`, 'exito');
+        await cargarMisIncidencias(paginaActualMisIncidencias);
 
     } catch (error) {
         console.error('Error cancelando incidencia:', error);
         mostrarToast(error.message, 'error');
+    } finally {
+        idIncidenciaACancelar = null;
     }
 }
 

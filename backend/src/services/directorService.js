@@ -8,6 +8,7 @@
 import incidenciaRepository from '../repositories/incidenciaRepository.js';
 import usuarioRepository from '../repositories/usuarioRepository.js';
 import emailService from '../utils/emailService.js';
+import pdfGenerator from '../utils/pdfGenerator.js';
 
 class DirectorService {
   async getDashboardSummary() {
@@ -16,10 +17,6 @@ class DirectorService {
 
   async getEmpleadosSistemas() {
     return await usuarioRepository.findEmpleadosSistemas();
-  }
-
-  async getTodasIncidencias() {
-    return await incidenciaRepository.findAll();
   }
 
   async asignarIncidencia(idIncidencia, id_usuario_sistemas) {
@@ -32,11 +29,7 @@ class DirectorService {
       throw error;
     }
 
-    let client;
-    try {
-      client = await incidenciaRepository.getClient();
-      await client.query('BEGIN');
-
+    return await incidenciaRepository.transaction(async (client) => {
       const incidencia = await incidenciaRepository.findByIdForUpdate(idInc, client);
       if (!incidencia) {
         const error = new Error('Incidencia no encontrada');
@@ -67,14 +60,8 @@ class DirectorService {
         await incidenciaRepository.addHistorialEstado(idInc, ID_EN_PROCESO, client);
       }
 
-      await client.query('COMMIT');
       return actualizada;
-    } catch (error) {
-      if (client) await client.query('ROLLBACK').catch(() => {});
-      throw error;
-    } finally {
-      if (client) client.release();
-    }
+    });
   }
 
   async cancelarIncidenciaDirector(idIncidencia) {
@@ -120,6 +107,43 @@ class DirectorService {
 
   async getReportesEstadisticos() {
     return await incidenciaRepository.getReportesEstadisticos();
+  }
+
+  async generarReportePdf({ desde, hasta, id_estado, asignado_a }, outputStream) {
+    const incidencias = await incidenciaRepository.getReporteIncidencias({
+      desde,
+      hasta,
+      id_estado,
+      asignado_a
+    });
+
+    let estadoEtiqueta = 'Todos';
+    if (id_estado && !isNaN(parseInt(id_estado, 10)) && parseInt(id_estado, 10) > 0) {
+      const idEst = parseInt(id_estado, 10);
+      const estMap = { 1: 'Pendiente', 2: 'En Proceso', 3: 'Resuelta', 4: 'Cancelada' };
+      estadoEtiqueta = estMap[idEst] || `Estado #${idEst}`;
+    }
+
+    let tecnicoEtiqueta = 'Todos';
+    if (asignado_a !== undefined && asignado_a !== null && String(asignado_a).trim() !== '') {
+      const idTec = parseInt(asignado_a, 10);
+      if (idTec === 0) {
+        tecnicoEtiqueta = 'Sin Asignar';
+      } else if (!isNaN(idTec)) {
+        const tec = await usuarioRepository.findTecnicoActivo(idTec);
+        tecnicoEtiqueta = tec ? `${tec.nombres} ${tec.apellidos}` : `Técnico #${idTec}`;
+      }
+    }
+
+    pdfGenerator.crearReporteIncidenciasPdf({
+      incidencias,
+      filtros: {
+        desde: desde || null,
+        hasta: hasta || null,
+        estado: estadoEtiqueta,
+        tecnico: tecnicoEtiqueta
+      }
+    }, outputStream);
   }
 }
 

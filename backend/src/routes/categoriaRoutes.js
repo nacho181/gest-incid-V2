@@ -23,12 +23,49 @@ const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS)];
  * /api/v1/categorias:
  *   get:
  *     tags: [Categorías]
- *     summary: Obtener todas las categorías (Browse)
+ *     summary: Obtener todas las categorías con paginación, orden y filtros en base de datos (Browse)
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Número de página actual
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Cantidad de categorías por página
+ *       - in: query
+ *         name: order_by
+ *         schema:
+ *           type: string
+ *           enum: [id_categoria, descripcion, activo]
+ *           default: id_categoria
+ *         description: Columna de ordenamiento validada
+ *       - in: query
+ *         name: order_dir
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *           default: ASC
+ *         description: Dirección de ordenamiento
+ *       - in: query
+ *         name: buscar
+ *         schema:
+ *           type: string
+ *         description: Término de búsqueda en descripción
+ *       - in: query
+ *         name: incluir_inactivos
+ *         schema:
+ *           type: boolean
+ *         description: Incluir categorías dadas de baja lógica
  *     responses:
  *       200:
- *         description: Lista de categorías
+ *         description: Lista paginada de categorías con metadata de paginación
  *   post:
  *     tags: [Categorías]
  *     summary: Crear una nueva categoría (Add)

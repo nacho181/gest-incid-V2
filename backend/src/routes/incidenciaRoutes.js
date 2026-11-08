@@ -1,3 +1,11 @@
+/**
+ * ============================================================================
+ * RUTAS DE LA API - INCIDENCIAS
+ * Recurso principal: listado, alta y cambios de estado (asignar, finalizar,
+ * cancelar) mediante PATCH.
+ * ============================================================================
+ */
+
 import express from 'express';
 import incidenciaController from '../controllers/incidenciaController.js';
 import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
@@ -9,8 +17,166 @@ const router = express.Router();
 const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS, ROLES.MUNICIPAL)];
 const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
 
+/**
+ * @openapi
+ * /api/v1/incidencias:
+ *   get:
+ *     tags: [Incidencias]
+ *     summary: Listar incidencias según el rol del usuario autenticado
+ *     description: >
+ *       Municipal: las incidencias que creó.
+ *       Sistemas: las incidencias asignadas a su cargo.
+ *       Director: todas las incidencias.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de incidencias
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Incidencia'
+ *       401:
+ *         $ref: '#/components/responses/NoAutenticado'
+ *       403:
+ *         $ref: '#/components/responses/SinPermiso'
+ *   post:
+ *     tags: [Incidencias]
+ *     summary: Reportar una nueva incidencia (solo Empleado Municipal)
+ *     description: La incidencia se crea en estado Pendiente y sin técnico asignado.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id_articulo, descripcion_pedido]
+ *             properties:
+ *               id_articulo:
+ *                 type: integer
+ *                 example: 2
+ *               prioridad:
+ *                 type: integer
+ *                 enum: [1, 2, 3]
+ *                 description: 1 Alta, 2 Media, 3 Baja (por defecto 1)
+ *                 example: 2
+ *               descripcion_pedido:
+ *                 type: string
+ *                 maxLength: 250
+ *                 example: El monitor parpadea de forma intermitente
+ *     responses:
+ *       201:
+ *         description: Incidencia creada
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mensaje:
+ *                   type: string
+ *                   example: Incidencia creada correctamente
+ *                 incidencia:
+ *                   $ref: '#/components/schemas/Incidencia'
+ *       400:
+ *         $ref: '#/components/responses/Validacion'
+ *       401:
+ *         $ref: '#/components/responses/NoAutenticado'
+ *       403:
+ *         $ref: '#/components/responses/SinPermiso'
+ *
+ * /api/v1/incidencias/{id}:
+ *   patch:
+ *     tags: [Incidencias]
+ *     summary: Asignar, finalizar o cancelar una incidencia
+ *     description: >
+ *       Se envía exactamente uno de estos cambios.
+ *       Asignar (solo Director): { asignado_a }, la incidencia pasa a En Proceso.
+ *       Finalizar (Sistemas o Director): { id_estado: 3, descripcion_resolucion }.
+ *       Cancelar: { id_estado: 4 }, solo si está Pendiente. El Municipal cancela las propias y el Director cualquiera.
+ *       Al finalizar o cancelar se notifica por correo al solicitante.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id_estado:
+ *                 type: integer
+ *                 enum: [3, 4]
+ *                 description: 3 finaliza, 4 cancela
+ *               asignado_a:
+ *                 type: integer
+ *                 description: ID de un técnico activo del área de Sistemas
+ *               descripcion_resolucion:
+ *                 type: string
+ *                 maxLength: 250
+ *                 description: Obligatoria cuando id_estado es 3
+ *           examples:
+ *             asignar:
+ *               summary: Asignar a un técnico (Director)
+ *               value: { asignado_a: 1 }
+ *             finalizar:
+ *               summary: Finalizar con la resolución técnica
+ *               value: { id_estado: 3, descripcion_resolucion: Se reemplazó el cable HDMI y el monitor funciona con normalidad }
+ *             cancelar:
+ *               summary: Cancelar una incidencia Pendiente
+ *               value: { id_estado: 4 }
+ *     responses:
+ *       200:
+ *         description: Cambio aplicado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mensaje:
+ *                   type: string
+ *                 incidencia:
+ *                   $ref: '#/components/schemas/Incidencia'
+ *                 notificacion_email:
+ *                   type: object
+ *                   description: Solo al finalizar. Indica si el correo se envió.
+ *                   properties:
+ *                     exito:
+ *                       type: boolean
+ *                     destinatario:
+ *                       type: string
+ *       400:
+ *         $ref: '#/components/responses/Validacion'
+ *       401:
+ *         $ref: '#/components/responses/NoAutenticado'
+ *       403:
+ *         $ref: '#/components/responses/SinPermiso'
+ *       404:
+ *         $ref: '#/components/responses/NoEncontrado'
+ *       409:
+ *         description: La incidencia cambió de estado mientras se procesaba la solicitud
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
+// Listar incidencias (el resultado depende del rol del token)
 router.get('/', verificarEmpleado, incidenciaController.listar);
+
+// Crear una incidencia (solo Empleado Municipal)
 router.post('/', verificarSoloMunicipal, validarCrearIncidencia, incidenciaController.crear);
+
+// Asignar, finalizar o cancelar
 router.patch('/:id', verificarEmpleado, validarActualizarIncidencia, incidenciaController.actualizar);
 
 export default router;

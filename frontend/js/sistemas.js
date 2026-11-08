@@ -154,6 +154,9 @@ function setupEventListenersSistemas() {
     }
 }
 
+/**
+ * GET /incidencias: para el rol Sistemas devuelve las incidencias asignadas a su cargo.
+ */
 async function cargarIncidenciasAsignadas() {
     const tbody = document.getElementById('tbodyIncidenciasSistemas');
     if (!tbody) return;
@@ -168,7 +171,7 @@ async function cargarIncidenciasAsignadas() {
     `;
 
     try {
-        const response = await fetch(`${API_BASE_URL}/sistemas/incidencias`, {
+        const response = await fetch(`${API_BASE_URL}/incidencias`, {
             headers: getAuthHeaders()
         });
 
@@ -309,6 +312,10 @@ function abrirModalFinalizar(idIncidencia) {
     }
 }
 
+/**
+ * Finaliza la incidencia.
+ * PATCH /incidencias/:id con { id_estado: 3, descripcion_resolucion }.
+ */
 async function enviarFinalizacionIncidencia(e) {
     e.preventDefault();
 
@@ -320,15 +327,16 @@ async function enviarFinalizacionIncidencia(e) {
         return;
     }
 
+    const idFinalizada = idIncidenciaSeleccionadaModal;
     const btnSubmit = document.getElementById('btnConfirmarFinalizar');
     try {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Procesando...`;
 
-        const response = await fetch(`${API_BASE_URL}/sistemas/incidencias/${idIncidenciaSeleccionadaModal}/finalizar`, {
-            method: 'PUT',
+        const response = await fetch(`${API_BASE_URL}/incidencias/${idFinalizada}`, {
+            method: 'PATCH',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ descripcion_resolucion })
+            body: JSON.stringify({ id_estado: 3, descripcion_resolucion })
         });
 
         const data = await response.json();
@@ -337,7 +345,13 @@ async function enviarFinalizacionIncidencia(e) {
             throw new Error(data.mensaje || 'Error al finalizar la incidencia');
         }
 
-        mostrarToast(`¡Incidencia #${idIncidenciaSeleccionadaModal} resuelta! Notificación por correo enviada.`, 'exito');
+        // El aviso depende del resultado real del envío del correo
+        const correo = data.notificacion_email;
+        if (correo && correo.exito) {
+            mostrarToast(`¡Incidencia #${idFinalizada} resuelta! Notificación por correo enviada.`, 'exito');
+        } else {
+            mostrarToast(`Incidencia #${idFinalizada} resuelta, pero no se pudo enviar el correo de notificación.`, 'info');
+        }
 
         if (modalFinalizarBs) {
             modalFinalizarBs.hide();

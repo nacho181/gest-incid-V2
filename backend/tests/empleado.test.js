@@ -67,11 +67,10 @@ async function runTests() {
     const token = resLogin.body.token;
     const authHeaders = { 'Authorization': `Bearer ${token}` };
 
-    // Pruebas 2: Obtener lista de empleados
-    console.log('Test 2: Lista de empleados...');
-    const resEmp = await request('GET', '/api/v1/usuarios/empleados', null, authHeaders);
-    assert.strictEqual(resEmp.status, 200);
-    assert.strictEqual(Array.isArray(resEmp.body), true);
+    // Test 2: un Municipal no puede listar técnicos (403)
+    console.log('Test 2: Municipal no accede a /usuarios?rol=2...');
+    const resEmp = await request('GET', '/api/v1/usuarios?rol=2', null, authHeaders);
+    assert.strictEqual(resEmp.status, 403);
 
     // Pruebas 3: Obtener lista de artículos
     console.log('Test 3: Lista de artículos...');
@@ -91,15 +90,13 @@ async function runTests() {
 
     // Pruebas 5: Listar incidencias creadas por el usuario autenticado
     console.log('Test 5: Listar mis incidencias...');
-    const resInc = await request('GET', '/api/v1/incidencias/mis-incidencias', null, authHeaders);
-    assert.strictEqual(resInc.status, 200);
+    const resInc = await request('GET', '/api/v1/incidencias', null, authHeaders);    assert.strictEqual(resInc.status, 200);
     assert.strictEqual(Array.isArray(resInc.body), true);
 
     // Pruebas 6: Cancelar la incidencia creada por el usuario autenticado
     console.log('Test 6: Cancelar incidencia pendiente...');
     const idParaCancelar = resCreate.body.incidencia ? resCreate.body.incidencia.id_incidencia : 1;
-    const resCancel = await request('PUT', `/api/v1/incidencias/${idParaCancelar}/cancelar`, null, authHeaders);
-    assert.strictEqual(resCancel.status, 200);
+    const resCancel = await request('PATCH', `/api/v1/incidencias/${idParaCancelar}`, { id_estado: 4 }, authHeaders);    assert.strictEqual(resCancel.status, 200);
 
     console.log('\n✅ TODAS LAS PRUEBAS PASARON EXITOSAMENTE!');
   } catch (err) {

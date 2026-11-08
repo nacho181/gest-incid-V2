@@ -76,17 +76,17 @@ async function runTests() {
     console.log(`   ✅ Login exitoso. Usuario ID: ${sistemasUserId}, Rol: 2`);
 
     // --------------------------------------------------------------------------
-    // Test 3: Protección RBAC - Denegar acceso a ruta sin token (401)
+    // Test 3: Protección - Denegar acceso a ruta sin token (401)
     // --------------------------------------------------------------------------
-    console.log('\nTest 3: Intentar listar incidencias asignadas sin token (401 Unauthorized)...');
-    const resSinToken = await request('GET', '/api/v1/sistemas/incidencias');
+    console.log('\nTest 3: Intentar listar incidencias sin token (401 Unauthorized)...');
+    const resSinToken = await request('GET', '/api/v1/incidencias');
     assert.strictEqual(resSinToken.status, 401);
     console.log('   ✅ Endpoint protegido correctamente sin token.');
 
     // --------------------------------------------------------------------------
-    // Test 4: Protección RBAC - Denegar acceso con rol 3 (Empleado Municipal - 403)
+    // Test 4: Protección RBAC - Un Municipal (rol 3) no puede finalizar (403)
     // --------------------------------------------------------------------------
-    console.log('\nTest 4: Intentar listar incidencias asignadas con usuario de rol 3 (Esteban Reniero)...');
+    console.log('\nTest 4: Intentar finalizar una incidencia con usuario de rol 3 (Esteban Reniero)...');
     const resLoginMunicipal = await request('POST', '/api/v1/auth/login', {
       usuario: 'estren@correo.com',
       contrasenia: 'estren'
@@ -94,17 +94,20 @@ async function runTests() {
     assert.strictEqual(resLoginMunicipal.status, 200);
     const tokenMunicipal = resLoginMunicipal.body.token;
 
-    const resRolInvalido = await request('GET', '/api/v1/sistemas/incidencias', null, {
+    const resRolInvalido = await request('PATCH', '/api/v1/incidencias/1', {
+      id_estado: 3,
+      descripcion_resolucion: 'Intento no autorizado'
+    }, {
       'Authorization': `Bearer ${tokenMunicipal}`
     });
-    assert.strictEqual(resRolInvalido.status, 403, 'Rol 3 no debe tener acceso a /sistemas/incidencias');
-    console.log('   ✅ Control de acceso RBAC verificado (403 Acceso denegado).');
+    assert.strictEqual(resRolInvalido.status, 403, 'Un Municipal no puede finalizar incidencias');
+    console.log('   ✅ Control de acceso por rol verificado (403 Acceso denegado).');
 
     // --------------------------------------------------------------------------
     // Test 5: Listar incidencias asignadas al Empleado de Sistemas (rol 2)
     // --------------------------------------------------------------------------
     console.log('\nTest 5: Listar incidencias asignadas al Empleado de Sistemas...');
-    const resAsignadas = await request('GET', '/api/v1/sistemas/incidencias', null, {
+    const resAsignadas = await request('GET', '/api/v1/incidencias', null, {
       'Authorization': `Bearer ${tokenSistemas}`
     });
     assert.strictEqual(resAsignadas.status, 200);
@@ -112,7 +115,7 @@ async function runTests() {
     console.log(`   ✅ Se obtuvieron ${resAsignadas.body.length} incidencias asignadas al técnico.`);
 
     // --------------------------------------------------------------------------
-    // Test 6: Crear una nueva incidencia asignada para prueba de finalización
+    // Test 6: Crear una incidencia y asignarla (pasa a En Proceso)
     // --------------------------------------------------------------------------
     console.log('\nTest 6: Preparando incidencia de prueba para resolver...');
     const resCrear = await request('POST', '/api/v1/incidencias', {
@@ -127,36 +130,44 @@ async function runTests() {
     assert.strictEqual(resCrear.body.incidencia.asignado_a, 0, 'Nuevas incidencias deben guardarse con el ID del usuario comodín Sin Asignar (0)');
     console.log(`   ✅ Incidencia #${idIncidenciaNueva} creada exitosamente con asignado_a = 0.`);
 
-    // Asignar manualmente la incidencia al técnico Carlos Perez (sistemasUserId) como Director
+    // Asignar la incidencia al técnico Carlos Perez como Director
     const resLoginDirector = await request('POST', '/api/v1/auth/login', {
       usuario: 'pamalm@correo.com',
       contrasenia: 'pamalm'
     });
     const tokenDirector = resLoginDirector.body.token;
-    const resAsignar = await request('PUT', `/api/v1/director/incidencias/${idIncidenciaNueva}/asignar`, {
-      id_usuario_sistemas: sistemasUserId
+    const resAsignar = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
+      asignado_a: sistemasUserId
     }, {
       'Authorization': `Bearer ${tokenDirector}`
     });
     assert.strictEqual(resAsignar.status, 200);
-    
-    
     assert.strictEqual(resAsignar.body.incidencia.id_estado, 2, 'Asignar debe pasar la incidencia a En Proceso');
 
     // Asignar a un usuario que no es técnico (Esteban, rol 3) debe fallar
-    const resAsignarMal = await request('PUT', `/api/v1/director/incidencias/${idIncidenciaNueva}/asignar`, {
-      id_usuario_sistemas: 4
+    const resAsignarMal = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
+      asignado_a: 4
     }, {
       'Authorization': `Bearer ${tokenDirector}`
     });
     assert.strictEqual(resAsignarMal.status, 400);
-    console.log(`   ✅ Incidencia #${idIncidenciaNueva} asignada manualmente al técnico Carlos Perez.`);
+    console.log(`   ✅ Incidencia #${idIncidenciaNueva} asignada al técnico Carlos Perez (En Proceso).`);
+
+    // Un Municipal no puede asignar (403)
+    const resAsignarMunicipal = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
+      asignado_a: sistemasUserId
+    }, {
+      'Authorization': `Bearer ${tokenMunicipal}`
+    });
+    assert.strictEqual(resAsignarMunicipal.status, 403);
+    console.log('   ✅ Solo el Director puede asignar incidencias.');
 
     // --------------------------------------------------------------------------
     // Test 7: Validación de campos obligatorios al finalizar (sin resolución)
     // --------------------------------------------------------------------------
-    console.log('\nTest 8: Intentar finalizar sin descripción de resolución (400 Bad Request)...');
-    const resFinVacia = await request('PUT', `/api/v1/sistemas/incidencias/${idIncidenciaNueva}/finalizar`, {
+    console.log('\nTest 7: Intentar finalizar sin descripción de resolución (400 Bad Request)...');
+    const resFinVacia = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
+      id_estado: 3,
       descripcion_resolucion: ''
     }, {
       'Authorization': `Bearer ${tokenSistemas}`
@@ -169,7 +180,8 @@ async function runTests() {
     // --------------------------------------------------------------------------
     console.log(`\nTest 8: Finalizar incidencia #${idIncidenciaNueva} con resolución técnica...`);
     const resolucionTexto = 'Se reemplazó el cable HDMI y el transformador de corriente. El monitor funciona con normalidad.';
-    const resFinalizar = await request('PUT', `/api/v1/sistemas/incidencias/${idIncidenciaNueva}/finalizar`, {
+    const resFinalizar = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
+      id_estado: 3,
       descripcion_resolucion: resolucionTexto
     }, {
       'Authorization': `Bearer ${tokenSistemas}`
@@ -187,7 +199,8 @@ async function runTests() {
     // Test 9: Intentar volver a finalizar una incidencia ya finalizada (400)
     // --------------------------------------------------------------------------
     console.log('\nTest 9: Intentar finalizar nuevamente la misma incidencia ya resuelta (400)...');
-    const resReFinalizar = await request('PUT', `/api/v1/sistemas/incidencias/${idIncidenciaNueva}/finalizar`, {
+    const resReFinalizar = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
+      id_estado: 3,
       descripcion_resolucion: 'Otro intento'
     }, {
       'Authorization': `Bearer ${tokenSistemas}`
@@ -208,7 +221,9 @@ async function runTests() {
     });
     const idParaCancelar = resCrearParaCancelar.body.incidencia.id_incidencia;
 
-    const resCancel = await request('PUT', `/api/v1/incidencias/${idParaCancelar}/cancelar`, null, {
+    const resCancel = await request('PATCH', `/api/v1/incidencias/${idParaCancelar}`, {
+      id_estado: 4
+    }, {
       'Authorization': `Bearer ${tokenMunicipal}`
     });
     assert.strictEqual(resCancel.status, 200);

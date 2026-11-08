@@ -24,7 +24,7 @@ let modalAsignarInstance = null;
  * Evento principal DOMContentLoaded
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // Verificar autenticación y validar que sea el Director de Sistemas (rol = 3)
+    // Verificar autenticación y validar que sea el Director de Sistemas (rol = 1)
     let userData = null;
     try {
         userData = JSON.parse(localStorage.getItem('user_data') || '{}');
@@ -190,10 +190,11 @@ function mostrarToastDirector(mensaje, tipo = 'exito') {
 
 /**
  * Consume el endpoint del dashboard para renderizar los resúmenes y métricas.
+ * GET /dashboard
  */
 async function cargarDashboard() {
     try {
-        const response = await fetch(`${API_BASE_URL}/director/dashboard`, {
+        const response = await fetch(`${API_BASE_URL}/dashboard`, {
             headers: getAuthHeaders()
         });
 
@@ -278,10 +279,11 @@ async function cargarDashboard() {
 
 /**
  * Carga la lista de empleados del área de Sistemas para poblar el modal de asignación.
+ * GET /usuarios?rol=2
  */
 async function cargarEmpleadosSistemas() {
     try {
-        const response = await fetch(`${API_BASE_URL}/director/empleados-sistemas`, {
+        const response = await fetch(`${API_BASE_URL}/usuarios?rol=2`, {
             headers: getAuthHeaders()
         });
 
@@ -308,6 +310,7 @@ async function cargarEmpleadosSistemas() {
 
 /**
  * Carga todas las incidencias para la tabla interactiva de gestión y asignación.
+ * GET /incidencias (el Director recibe todas).
  */
 async function cargarGestionIncidencias() {
     const tbody = document.getElementById('tbodyGestion');
@@ -316,7 +319,7 @@ async function cargarGestionIncidencias() {
     tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Cargando incidencias...</td></tr>';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/director/incidencias`, {
+        const response = await fetch(`${API_BASE_URL}/incidencias`, {
             headers: getAuthHeaders()
         });
 
@@ -351,15 +354,16 @@ async function cargarGestionIncidencias() {
                 badgeEst = '<span class="badge bg-secondary">Cancelada</span>';
             }
 
+            const esFinalizada = (inc.id_estado === 3 || estadoNom.includes('resuel') || estadoNom.includes('finalizada'));
             const esCancelada = (inc.id_estado === 4 || estadoNom.includes('cancel'));
             const esPendiente = (inc.id_estado === 1 || estadoNom.includes('pendiente'));
 
-            // Botón para Asignar (Deshabilitado si está Cancelada)
-            const btnAsignar = esCancelada
-                ? `<button class="btn btn-sm btn-outline-secondary me-1 fw-semibold" disabled title="Incidencia cancelada">Asignar</button>`
+            // Botón para Asignar (deshabilitado si ya está Finalizada o Cancelada)
+            const btnAsignar = (esCancelada || esFinalizada)
+                ? `<button class="btn btn-sm btn-outline-secondary me-1 fw-semibold" disabled title="La incidencia ya está cerrada">Asignar</button>`
                 : `<button data-action="asignar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-concordia me-1 fw-semibold">Asignar</button>`;
 
-            // Botón para Cancelar (Soft delete habilitado únicamente si está Pendiente)
+            // Botón para Cancelar (soft delete habilitado únicamente si está Pendiente)
             const btnCancelar = esPendiente
                 ? `<button data-action="cancelar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-danger fw-semibold">Cancelar</button>`
                 : `<span class="text-muted small">N/A</span>`;
@@ -398,7 +402,8 @@ function abrirModalAsignar(idIncidencia) {
 }
 
 /**
- * Ejecuta la actualización de asignación mediante petición PUT al backend REST.
+ * Asigna la incidencia a un técnico.
+ * PATCH /incidencias/:id con { asignado_a }. El servidor la pasa a "En Proceso".
  */
 async function ejecutarAsignacion() {
     if (!incidenciaSeleccionadaModal) return;
@@ -412,10 +417,10 @@ async function ejecutarAsignacion() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/director/incidencias/${incidenciaSeleccionadaModal}/asignar`, {
-            method: 'PUT',
+        const response = await fetch(`${API_BASE_URL}/incidencias/${incidenciaSeleccionadaModal}`, {
+            method: 'PATCH',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ id_usuario_sistemas })
+            body: JSON.stringify({ asignado_a: id_usuario_sistemas })
         });
 
         const data = await response.json();
@@ -441,7 +446,8 @@ async function ejecutarAsignacion() {
 }
 
 /**
- * Ejecuta el soft delete (cancelación) de una incidencia con estado 'Pendiente'.
+ * Cancela (soft delete) una incidencia con estado 'Pendiente'.
+ * PATCH /incidencias/:id con { id_estado: 4 }.
  * @param {number} idIncidencia - ID de la incidencia.
  */
 async function cancelarIncidenciaDirector(idIncidencia) {
@@ -450,9 +456,10 @@ async function cancelarIncidenciaDirector(idIncidencia) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/director/incidencias/${idIncidencia}/cancelar`, {
-            method: 'PUT',
-            headers: getAuthHeaders()
+        const response = await fetch(`${API_BASE_URL}/incidencias/${idIncidencia}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id_estado: 4 })
         });
 
         const data = await response.json();
@@ -474,10 +481,11 @@ async function cancelarIncidenciaDirector(idIncidencia) {
 
 /**
  * Carga las estadísticas para el reporte en la pestaña de reportes.
+ * GET /reportes
  */
 async function cargarReportesEstadisticos() {
     try {
-        const response = await fetch(`${API_BASE_URL}/director/reportes`, {
+        const response = await fetch(`${API_BASE_URL}/reportes`, {
             headers: getAuthHeaders()
         });
 

@@ -198,8 +198,5 @@ router.patch(
 // DELETE: Borrado lógico / Soft delete (NO borrado físico)
 router.delete('/:id', verificarAdmin, validarId, articuloController.eliminarArticulo);
 
-// REACTIVAR: Reactivación lógica de artículo
-router.put('/:id/reactivar', verificarAdmin, validarId, articuloController.reactivarArticulo);
-router.patch('/:id/reactivar', verificarAdmin, validarId, articuloController.reactivarArticulo);
 
 export default router;

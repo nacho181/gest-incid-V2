@@ -22,17 +22,28 @@ export const validarCrearIncidencia = [
   validarCampos
 ];
 
-export const validarAsignar = [
-  idParam,
-  body('id_usuario_sistemas')
-    .isInt({ min: 1 }).withMessage('id_usuario_sistemas debe ser un número entero positivo')
-    .toInt(),
-  validarCampos
-];
 
-export const validarFinalizar = [
+export const validarActualizarIncidencia = [
   idParam,
+  // Debe venir exactamente uno de los dos: id_estado o asignado_a
+  body('id_estado').custom((_, { req }) => {
+    const tieneEstado = req.body.id_estado !== undefined;
+    const tieneAsignado = req.body.asignado_a !== undefined;
+    if (tieneEstado === tieneAsignado) {
+      throw new Error('Indicá id_estado (3 o 4) o asignado_a, pero no ambos ni ninguno');
+    }
+    return true;
+  }),
+  body('id_estado')
+    .optional()
+    .isIn([3, 4]).withMessage('id_estado solo puede ser 3 (finalizada) o 4 (cancelada)')
+    .toInt(),
+  body('asignado_a')
+    .optional()
+    .isInt({ min: 1 }).withMessage('asignado_a debe ser un número entero positivo')
+    .toInt(),
   body('descripcion_resolucion')
+    .if((_, { req }) => Number(req.body.id_estado) === 3)
     .trim()
     .notEmpty().withMessage('Debes proporcionar la descripción de la resolución técnica')
     .isLength({ max: 250 }).withMessage('La resolución no puede superar los 250 caracteres'),

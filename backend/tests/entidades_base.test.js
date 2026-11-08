@@ -133,7 +133,7 @@ async function runTests() {
 
     // 7. Reactivar categoría
     console.log('Test 7: [Reactivar] Reactivación de categoría dada de baja...');
-    const resReactCat = await request('PUT', `/api/v1/categorias/${idCatCreada}/reactivar`, null, authHeaders);
+    const resReactCat = await request('PATCH', `/api/v1/categorias/${idCatCreada}`, { activo: 1 }, authHeaders);
     assert.strictEqual(resReactCat.status, 200);
     assert.strictEqual(resReactCat.body.categoria.activo, 1);
     console.log(`   ✅ Categoría #${idCatCreada} reactivada exitosamente.`);
@@ -226,7 +226,7 @@ async function runTests() {
 
     // 15. Reactivar artículo
     console.log('Test 15: [Reactivar] Reactivación de artículo...');
-    const resReactArt = await request('PUT', `/api/v1/articulos/${idArtCreado}/reactivar`, null, authHeaders);
+    const resReactArt = await request('PATCH', `/api/v1/articulos/${idArtCreado}`, { activo: 1 }, authHeaders);
     assert.strictEqual(resReactArt.status, 200);
     assert.strictEqual(resReactArt.body.articulo.activo, 1);
     console.log(`   ✅ Artículo #${idArtCreado} reactivado exitosamente.`);

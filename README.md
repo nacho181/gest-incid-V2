@@ -157,14 +157,14 @@ El sistema implementa una máquina de estados estricta y trazable con auditoría
 
 ### Paso 1: Crear e Inicializar la Base de Datos PostgreSQL
 
-Crear la base de datos `incidencias_concordia` e importar el esquema y los datos semilla desde `backend/database/incidencias_db.sql`:
+Crear la base de datos `incidencias_db` e importar el esquema y los datos semilla desde `backend/database/incidencias_db.sql`:
 
 ```bash
 # Crear la base de datos
-psql -U postgres -c "CREATE DATABASE incidencias_concordia;"
+psql -U postgres -c "CREATE DATABASE incidencias_db;"
 
 # Ejecutar el script de estructura y datos iniciales
-psql -U postgres -d incidencias_concordia -f backend/database/incidencias_db.sql
+psql -U postgres -d incidencias_db -f backend/database/incidencias_db.sql
 ```
 
 ### Paso 2: Configurar Variables de Entorno del Backend
@@ -187,7 +187,7 @@ PGHOST=localhost
 PGPORT=5432
 PGUSER=postgres
 PGPASSWORD=tu_contraseña_aqui
-PGDATABASE=incidencias_concordia
+PGDATABASE=incidencias_db
 
 # Clave Secreta para Tokens JWT
 JWT_SECRET=secreto_concordia_jwt_2026

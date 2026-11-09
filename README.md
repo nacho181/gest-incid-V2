@@ -24,7 +24,6 @@ gest-incid-V2/
 │   │   ├── routes/                 # Definición de rutas REST (/api/v1/*) y anotaciones OpenAPI 3.0
 │   │   ├── utils/                  # Paginación segura, generador PDF (PDFKit), correo (Nodemailer) y Swagger
 │   │   └── server.js               # Punto de entrada HTTP Express
-│   ├── tests/                      # Suites de pruebas de integración automatizadas
 │   ├── .env.example                # Plantilla de variables de entorno
 │   └── package.json
 ├── frontend/                       # Cliente Web Multipágina (Vite 5 + Bootstrap 5 + Vanilla JS ESM)

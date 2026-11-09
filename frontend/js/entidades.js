@@ -110,8 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Muestra información del usuario logueado en la barra superior si existe.
  */
 function verificarUsuarioCabecera() {
-    const lblUser = document.getElementById('lblUserHeader');
-    const lblUserRol = document.getElementById('lblUserRolHeader');
+    // Referencias actualizadas al menú dropdown
     const btnLogout = document.getElementById('btnLogoutHeader');
 
     if (btnLogout) {
@@ -125,12 +124,30 @@ function verificarUsuarioCabecera() {
         const raw = localStorage.getItem('user_data');
         if (raw) {
             const user = JSON.parse(raw);
-            if (lblUser && user && user.nombres) {
-                lblUser.textContent = `${user.nombres} ${user.apellidos || ''}`.trim();
-            }
-            if (lblUserRol && user) {
-                const rolTexto = user.rol === 1 ? 'Director de Sistemas' : user.rol === 2 ? 'Empleado de Sistemas' : 'Empleado Municipal';
-                lblUserRol.textContent = rolTexto;
+            const nombreCompleto = `${user.nombres} ${user.apellidos || ''}`.trim();
+            const rolTexto = user.rol === 1 ? 'Director de Sistemas' : user.rol === 2 ? 'Empleado de Sistemas' : 'Empleado Municipal';
+            
+            // Actualizar vista normal
+            const lblUser = document.getElementById('lblUserHeader');
+            const lblUserRol = document.getElementById('lblUserRolHeader');
+            if (lblUser && user && user.nombres) lblUser.textContent = nombreCompleto;
+            if (lblUserRol && user) lblUserRol.textContent = rolTexto;
+            
+            // Actualizar interior del dropdown
+            const lblNombreDrop = document.getElementById('lblUsuarioNombreDrop');
+            const lblUsuarioDrop = document.getElementById('lblUsuarioUsuarioDrop');
+            if (lblNombreDrop) lblNombreDrop.textContent = nombreCompleto;
+            if (lblUsuarioDrop) lblUsuarioDrop.textContent = user.usuario || '';
+            
+            // Cargar avatar en todas las etiquetas
+            const imgNav = document.getElementById('imgAvatarNav');
+            const imgLarge = document.getElementById('imgAvatarLarge');
+            const imgFull = document.getElementById('imgAvatarFull');
+            
+            if (user.avatar) {
+                if (imgNav) imgNav.src = user.avatar;
+                if (imgLarge) imgLarge.src = user.avatar;
+                if (imgFull) imgFull.src = user.avatar;
             }
         }
     } catch (e) {
@@ -278,6 +295,77 @@ function setupEventListeners() {
                 confirmarBajaLogica('articulo', id, nombre);
             } else if (action === 'reactivar') {
                 reactivarArticulo(id);
+            }
+        });
+    }
+    
+    // ==========================================
+    // Lógica de Subida de Avatar (Multer)
+    // ==========================================
+    const btnTriggerUpload = document.getElementById('btnTriggerUpload');
+    const inputAvatar = document.getElementById('inputAvatarHidden');
+    const imgNav = document.getElementById('imgAvatarNav');
+    const imgLarge = document.getElementById('imgAvatarLarge');
+    const imgFull = document.getElementById('imgAvatarFull');
+
+    if (btnTriggerUpload && inputAvatar) {
+        // Disparar input oculto solo al hacer clic en el botón de la cámara
+        btnTriggerUpload.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evita que se cierre el menú dropdown al hacer clic
+            inputAvatar.click();
+        });
+
+        // Escuchar la selección del archivo
+        inputAvatar.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validación en frontend (2 MB)
+            if (file.size > 2 * 1024 * 1024) {
+                mostrarToast('La imagen supera el tamaño máximo de 2 MB', 'error');
+                inputAvatar.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('avatar', file); // 'avatar' debe coincidir con el campo esperado en backend
+
+            try {
+                mostrarToast('Subiendo foto de perfil...', 'info');
+
+                const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`
+                        // ATENCIÓN: No definir 'Content-Type'. 
+                        // Fetch lo calcula automáticamente con el boundary del FormData.
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.mensaje || 'Error al subir el avatar.');
+                }
+
+                // Actualizar imágenes en el DOM
+                if (imgNav) imgNav.src = data.usuario.avatar;
+                if (imgLarge) imgLarge.src = data.usuario.avatar;
+                if (imgFull) imgFull.src = data.usuario.avatar;
+                
+                // Actualizar la sesión en localStorage para persistencia visual entre recargas
+                if (USER) {
+                    USER.avatar = data.usuario.avatar;
+                    localStorage.setItem('user_data', JSON.stringify(USER));
+                }
+
+                mostrarToast('Foto de perfil actualizada con éxito', 'exito');
+            } catch (error) {
+                console.error('Error subiendo avatar:', error);
+                mostrarToast(error.message, 'error');
+            } finally {
+                inputAvatar.value = ''; // Resetear para permitir subir la misma foto si falló
             }
         });
     }
@@ -1027,11 +1115,11 @@ function mostrarToast(mensaje, tipo = 'info') {
 function escapeHtml(texto) {
     if (!texto) return '';
     return String(texto)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, "'");
 }
 
 /**
@@ -1060,7 +1148,7 @@ function renderizarPaginador({ ulElement, infoElement, total, page, limit, total
     // Botón Anterior
     const liPrev = document.createElement('li');
     liPrev.className = `page-item ${pagActual <= 1 ? 'disabled' : ''}`;
-    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">&laquo;</button>`;
+    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">«</button>`;
     if (pagActual > 1) {
         liPrev.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual - 1));
     }
@@ -1115,7 +1203,7 @@ function renderizarPaginador({ ulElement, infoElement, total, page, limit, total
     // Botón Siguiente
     const liNext = document.createElement('li');
     liNext.className = `page-item ${pagActual >= cantPaginas ? 'disabled' : ''}`;
-    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">&raquo;</button>`;
+    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">»</button>`;
     if (pagActual < cantPaginas) {
         liNext.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual + 1));
     }

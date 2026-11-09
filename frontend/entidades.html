@@ -25,14 +25,44 @@
             </div>
 
             <!-- Navegación entre Módulos y Perfil -->
-            <div class="d-flex align-items-center gap-3 mt-2 mt-sm-0">
-                <div id="userInfoHeader" class="text-white text-end ms-2 d-none d-md-block">
-                    <div id="lblUserHeader" class="fw-bold small leading-tight">Usuario</div>
-                    <span id="lblUserRolHeader" class="badge bg-concordia-light">Empleado Municipal</span>
+            <div class="d-flex align-items-center gap-3 mt-2 mt-sm-0" id="userInfoHeader">
+                
+                <!-- ========================================== -->
+                <!-- NUEVO: Menú de Usuario (Dropdown)          -->
+                <!-- ========================================== -->
+                <div class="dropdown">
+                    <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="text-end me-2 d-none d-md-block">
+                            <div id="lblUserHeader" class="fw-bold small leading-tight">Usuario</div>
+                            <span id="lblUserRolHeader" class="badge bg-concordia-light">Empleado Municipal</span>
+                        </div>
+                        <img id="imgAvatarNav" src="/uploads/avatars/default.png" class="rounded-circle border border-2 border-white shadow-sm flex-shrink-0" width="48" height="48" alt="Avatar" style="object-fit: cover; aspect-ratio: 1/1;">
+                    </a>
+                    
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 rounded-4" aria-labelledby="userDropdown" style="min-width: 240px;">
+                        <li class="text-center p-3 pb-2">
+                            <!-- Contenedor del avatar gigante en el menú -->
+                            <div class="position-relative d-inline-block mb-2">
+                                <img id="imgAvatarLarge" src="/uploads/avatars/default.png" class="rounded-circle border border-3 border-light shadow-sm" width="96" height="96" alt="Avatar Grande" style="object-fit: cover; aspect-ratio: 1/1; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modalVerAvatar">
+                                <button type="button" class="btn btn-concordia position-absolute bottom-0 start-100 translate-middle rounded-circle shadow d-flex align-items-center justify-content-center" id="btnTriggerUpload" title="Cambiar foto" style="width: 34px; height: 34px; padding: 0;">
+                                    <i class="bi bi-camera-fill text-white"></i>
+                                </button>
+                            </div>
+                            <h6 class="fw-bold mb-0 text-dark" id="lblUsuarioNombreDrop">Cargando...</h6>
+                            <small class="text-muted" id="lblUsuarioUsuarioDrop">correo@ejemplo.com</small>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button class="dropdown-item text-danger fw-semibold py-2" id="btnLogoutHeader">
+                                <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión
+                            </button>
+                        </li>
+                    </ul>
                 </div>
-                <button id="btnLogoutHeader" class="btn btn-sm btn-outline-light fw-semibold">
-                    Cerrar Sesión
-                </button>
+                <!-- Input oculto para Multer -->
+                <input type="file" id="inputAvatarHidden" class="d-none" accept="image/*">
+                <!-- ========================================== -->
+
             </div>
         </div>
     </header>
@@ -410,11 +440,25 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal para ver Avatar ampliado -->
+    <div class="modal fade" id="modalVerAvatar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-transparent border-0 shadow-none">
+                <div class="modal-header border-0 pb-0 justify-content-end">
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body text-center p-0">
+                    <img id="imgAvatarFull" src="/uploads/avatars/default.png" class="img-fluid rounded-4 shadow-lg" alt="Foto de perfil a tamaño completo" style="max-height: 75vh; object-fit: contain;">
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Pie de Página Institucional -->
     <footer class="footer bg-dark text-light py-3 mt-auto">
         <div class="container text-center small text-white-50">
-            &copy; 2026 Municipalidad de Concordia - Entre Ríos. Sistema Integral de Gestión de Incidencias.
+            © 2026 Municipalidad de Concordia - Entre Ríos. Sistema Integral de Gestión de Incidencias.
         </div>
     </footer>
 

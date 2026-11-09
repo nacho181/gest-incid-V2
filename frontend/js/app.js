@@ -88,8 +88,8 @@ function setupEventListeners() {
         formLogin.addEventListener('submit', manejarLogin);
     }
 
-    // Botón de cerrar sesión
-    const btnLogout = document.getElementById('btnLogout');
+    // Botón de cerrar sesión (Actualizado al ID del dropdown)
+    const btnLogout = document.getElementById('btnLogoutDropdown');
     if (btnLogout) {
         btnLogout.addEventListener('click', cerrarSesion);
     }
@@ -150,6 +150,77 @@ function setupEventListeners() {
     const btnConfirmarCancel = document.getElementById('btnConfirmarCancelacionModal');
     if (btnConfirmarCancel) {
         btnConfirmarCancel.addEventListener('click', ejecutarCancelacionIncidencia);
+    }
+
+    // ==========================================
+    // Lógica de Subida de Avatar (Multer)
+    // ==========================================
+    const btnTriggerUpload = document.getElementById('btnTriggerUpload');
+    const inputAvatar = document.getElementById('inputAvatarHidden');
+    const imgNav = document.getElementById('imgAvatarNav');
+    const imgLarge = document.getElementById('imgAvatarLarge');
+    const imgFull = document.getElementById('imgAvatarFull');
+
+    if (btnTriggerUpload && inputAvatar) {
+        // Disparar input oculto solo al hacer clic en el botón de la cámara
+        btnTriggerUpload.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evita que se cierre el menú dropdown al hacer clic
+            inputAvatar.click();
+        });
+
+        // Escuchar la selección del archivo
+        inputAvatar.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validación en frontend (2 MB)
+            if (file.size > 2 * 1024 * 1024) {
+                mostrarToast('La imagen supera el tamaño máximo de 2 MB', 'error');
+                inputAvatar.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('avatar', file); // 'avatar' debe coincidir con el campo esperado en backend
+
+            try {
+                mostrarToast('Subiendo foto de perfil...', 'info');
+
+                const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                        // ATENCIÓN: No definir 'Content-Type'. 
+                        // Fetch lo calcula automáticamente con el boundary del FormData.
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.mensaje || 'Error al subir el avatar.');
+                }
+
+                // Actualizar imágenes en el DOM
+                if (imgNav) imgNav.src = data.usuario.avatar;
+                if (imgLarge) imgLarge.src = data.usuario.avatar;
+                if (imgFull) imgFull.src = data.usuario.avatar;
+                
+                // Actualizar la sesión en localStorage para persistencia visual entre recargas
+                if (currentUser) {
+                    currentUser.avatar = data.usuario.avatar;
+                    localStorage.setItem('user_data', JSON.stringify(currentUser));
+                }
+
+                mostrarToast('Foto de perfil actualizada con éxito', 'exito');
+            } catch (error) {
+                console.error('Error subiendo avatar:', error);
+                mostrarToast(error.message, 'error');
+            } finally {
+                inputAvatar.value = ''; // Resetear para permitir subir la misma foto si falló
+            }
+        });
     }
 }
 
@@ -312,16 +383,37 @@ function mostrarVistaAutenticada() {
         const puedeAdministrar = currentUser && (currentUser.rol === 2);
         btnEntidades.classList.toggle('d-none', !puedeAdministrar);
     }
-    // Mapear nombres y roles
+    
+    // Mapear nombres y roles en cabecera y dropdown
     if (currentUser) {
-        document.getElementById('lblUsuarioNombre').textContent = `${currentUser.nombres} ${currentUser.apellidos}`;
+        const nombreCompleto = `${currentUser.nombres} ${currentUser.apellidos}`;
+        
+        const lblNombre = document.getElementById('lblUsuarioNombre');
+        const lblNombreDrop = document.getElementById('lblUsuarioNombreDrop');
+        const lblUsuarioDrop = document.getElementById('lblUsuarioUsuarioDrop');
+        
+        if (lblNombre) lblNombre.textContent = nombreCompleto;
+        if (lblNombreDrop) lblNombreDrop.textContent = nombreCompleto;
+        if (lblUsuarioDrop) lblUsuarioDrop.textContent = currentUser.usuario || '';
 
         let nombreRol = 'Empleado';
         if (currentUser.rol === 1) nombreRol = 'Director de Sistemas';
         if (currentUser.rol === 2) nombreRol = 'Empleado de Sistemas';
         if (currentUser.rol === 3) nombreRol = 'Empleado Municipal';
 
-        document.getElementById('lblUsuarioRol').textContent = nombreRol;
+        const lblRol = document.getElementById('lblUsuarioRol');
+        if (lblRol) lblRol.textContent = nombreRol;
+
+        // Cargar avatar si existe en la sesión
+        const imgAvatarNav = document.getElementById('imgAvatarNav');
+        const imgAvatarLarge = document.getElementById('imgAvatarLarge');
+        const imgAvatarFull = document.getElementById('imgAvatarFull');
+        
+        if (currentUser.avatar) {
+            if (imgAvatarNav) imgAvatarNav.src = currentUser.avatar;
+            if (imgAvatarLarge) imgAvatarLarge.src = currentUser.avatar;
+            if (imgAvatarFull) imgAvatarFull.src = currentUser.avatar;
+        }
     }
 
     // Cargar los módulos correspondientes
@@ -602,7 +694,7 @@ function renderizarPaginador({ ulElement, infoElement, total, page, limit, total
     // Botón Anterior
     const liPrev = document.createElement('li');
     liPrev.className = `page-item ${pagActual <= 1 ? 'disabled' : ''}`;
-    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">&laquo;</button>`;
+    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">«</button>`;
     if (pagActual > 1) {
         liPrev.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual - 1));
     }
@@ -657,7 +749,7 @@ function renderizarPaginador({ ulElement, infoElement, total, page, limit, total
     // Botón Siguiente
     const liNext = document.createElement('li');
     liNext.className = `page-item ${pagActual >= cantPaginas ? 'disabled' : ''}`;
-    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">&raquo;</button>`;
+    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">»</button>`;
     if (pagActual < cantPaginas) {
         liNext.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual + 1));
     }
@@ -788,9 +880,9 @@ function mostrarToast(mensaje, tipo = 'exito') {
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, "'");
 }

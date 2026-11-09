@@ -65,10 +65,26 @@ document.addEventListener('DOMContentLoaded', () => {
         fechaEl.textContent = `Fecha de emisión: ${new Date().toLocaleDateString('es-AR')}`;
     }
 
-    // Actualizar nombre y rol en la cabecera si están disponibles
+    // Actualizar nombre y rol en la cabecera y el dropdown
     const lblNombre = document.getElementById('lblDirectorNombre');
-    if (lblNombre && userData.nombres) {
-        lblNombre.textContent = `${userData.nombres} ${userData.apellidos || ''}`.trim();
+    const lblNombreDrop = document.getElementById('lblDirectorNombreDrop');
+    const lblUsuarioDrop = document.getElementById('lblDirectorUsuarioDrop');
+    
+    if (userData) {
+        const nombreCompleto = `${userData.nombres || ''} ${userData.apellidos || ''}`.trim();
+        if (lblNombre) lblNombre.textContent = nombreCompleto;
+        if (lblNombreDrop) lblNombreDrop.textContent = nombreCompleto;
+        if (lblUsuarioDrop) lblUsuarioDrop.textContent = userData.usuario || '';
+    }
+
+    // Cargar avatar si existe en la sesión
+    const imgAvatarNav = document.getElementById('imgAvatarNav');
+    const imgAvatarLarge = document.getElementById('imgAvatarLarge');
+    const imgAvatarFull = document.getElementById('imgAvatarFull');
+    if (userData && userData.avatar) {
+        if (imgAvatarNav) imgAvatarNav.src = userData.avatar;
+        if (imgAvatarLarge) imgAvatarLarge.src = userData.avatar;
+        if (imgAvatarFull) imgAvatarFull.src = userData.avatar;
     }
 
     // Cargar datos iniciales
@@ -120,8 +136,8 @@ function setupEventListenersDirector() {
         });
     });
 
-    // Botón para cerrar sesión
-    const btnLogout = document.getElementById('btnLogoutDirector');
+    // Botón para cerrar sesión (Actualizado al ID del dropdown)
+    const btnLogout = document.getElementById('btnLogoutDropdown');
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
             localStorage.removeItem('jwt_token');
@@ -203,6 +219,76 @@ function setupEventListenersDirector() {
                 abrirModalAsignar(parseInt(id, 10));
             } else if (action === 'cancelar') {
                 cancelarIncidenciaDirector(parseInt(id, 10));
+            }
+        });
+    }
+
+    // ==========================================
+    // Lógica de Subida de Avatar (Multer)
+    // ==========================================
+    const btnTriggerUpload = document.getElementById('btnTriggerUpload');
+    const inputAvatar = document.getElementById('inputAvatarHidden');
+    const imgNav = document.getElementById('imgAvatarNav');
+    const imgLarge = document.getElementById('imgAvatarLarge');
+    const imgFull = document.getElementById('imgAvatarFull');
+
+    if (btnTriggerUpload && inputAvatar) {
+        // Disparar input oculto solo al hacer clic en el botón de la cámara
+        btnTriggerUpload.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evita que se cierre el menú dropdown al hacer clic
+            inputAvatar.click();
+        });
+
+        // Escuchar la selección del archivo
+        inputAvatar.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validación en frontend (2 MB)
+            if (file.size > 2 * 1024 * 1024) {
+                mostrarToastDirector('La imagen supera el tamaño máximo de 2 MB', 'error');
+                inputAvatar.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('avatar', file); // 'avatar' debe coincidir con el campo esperado en backend
+
+            try {
+                mostrarToastDirector('Subiendo foto de perfil...', 'info');
+
+                const response = await fetch(`${API_BASE_URL}/auth/avatar`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${tokenJWT}`
+                        // ATENCIÓN: No definir 'Content-Type'. 
+                        // Fetch lo calcula automáticamente con el boundary del FormData.
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.mensaje || 'Error al subir el avatar.');
+                }
+
+                // Actualizar imágenes en el DOM
+                if (imgNav) imgNav.src = data.usuario.avatar;
+                if (imgLarge) imgLarge.src = data.usuario.avatar;
+                if (imgFull) imgFull.src = data.usuario.avatar;
+                
+                // Actualizar la sesión en localStorage para persistencia visual entre recargas
+                let sessionData = JSON.parse(localStorage.getItem('user_data') || '{}');
+                sessionData.avatar = data.usuario.avatar;
+                localStorage.setItem('user_data', JSON.stringify(sessionData));
+
+                mostrarToastDirector('Foto de perfil actualizada con éxito', 'exito');
+            } catch (error) {
+                console.error('Error subiendo avatar:', error);
+                mostrarToastDirector(error.message, 'error');
+            } finally {
+                inputAvatar.value = ''; // Resetear para permitir subir la misma foto si falló
             }
         });
     }
@@ -498,7 +584,7 @@ function renderizarPaginador({ ulElement, infoElement, total, page, limit, total
     // Botón Anterior
     const liPrev = document.createElement('li');
     liPrev.className = `page-item ${pagActual <= 1 ? 'disabled' : ''}`;
-    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">&laquo;</button>`;
+    liPrev.innerHTML = `<button class="page-link" type="button" aria-label="Anterior">«</button>`;
     if (pagActual > 1) {
         liPrev.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual - 1));
     }
@@ -553,7 +639,7 @@ function renderizarPaginador({ ulElement, infoElement, total, page, limit, total
     // Botón Siguiente
     const liNext = document.createElement('li');
     liNext.className = `page-item ${pagActual >= cantPaginas ? 'disabled' : ''}`;
-    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">&raquo;</button>`;
+    liNext.innerHTML = `<button class="page-link" type="button" aria-label="Siguiente">»</button>`;
     if (pagActual < cantPaginas) {
         liNext.querySelector('button').addEventListener('click', () => onCambiarPagina(pagActual + 1));
     }
@@ -822,9 +908,9 @@ async function generarReportePDF() {
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, "'");
 }

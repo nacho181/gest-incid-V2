@@ -6,6 +6,7 @@
  */
 
 import jwt from 'jsonwebtoken';
+import JWT_SECRET from '../config/jwt.js';
 
 /**
  * Middleware para validar el token JWT en el header Authorization.
@@ -23,8 +24,7 @@ export const verificarToken = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    const jwtSecret = process.env.JWT_SECRET || 'secreto_concordia_jwt_2026';
-    const decodificado = jwt.verify(token, jwtSecret);
+    const decodificado = jwt.verify(token, JWT_SECRET);
     req.usuario = decodificado;
     next();
   } catch (error) {

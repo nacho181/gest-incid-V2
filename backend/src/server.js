@@ -130,6 +130,7 @@ if (process.argv[1] && process.argv[1].endsWith('server.js')) {
     console.log(`====================================================`);
     console.log(`Servidor corriendo en el puerto ${PORT}`);
     console.log(`Accede a la interfaz web en http://localhost:${PORT}`);
+    console.log(`Documentación API (Swagger): http://localhost:${PORT}/api-docs`);
     console.log(`====================================================`);
   });
 }

@@ -445,9 +445,10 @@ async function iniciarAtencionIncidencia(idIncidencia, btnElement) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/incidencias/${idIncidencia}/en-proceso`, {
-            method: 'PUT',
-            headers: getAuthHeaders()
+        const response = await fetch(`${API_BASE_URL}/incidencias/${idIncidencia}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ id_estado: 2 })
         });
 
         const data = await response.json();
@@ -506,11 +507,14 @@ async function enviarFinalizacionIncidencia(e) {
     try {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Procesando...`;
-
-        const response = await fetch(`${API_BASE_URL}/incidencias/${idFinalizada}/finalizar`, {
-            method: 'PUT',
+        
+        const response = await fetch(`${API_BASE_URL}/incidencias/${idFinalizada}`, {
+            method: 'PATCH',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ descripcion_resolucion })
+            body: JSON.stringify({ 
+                id_estado: 3, 
+                descripcion_resolucion: descripcion_resolucion 
+            })
         });
 
         const data = await response.json();

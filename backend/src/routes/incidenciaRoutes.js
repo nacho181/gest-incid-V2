@@ -164,88 +164,6 @@ const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
  *       403:
  *         $ref: '#/components/responses/SinPermiso'
  *
- * /api/v1/incidencias/{id}/en-proceso:
- *   put:
- *     tags: [Incidencias]
- *     summary: Iniciar atención técnica y pasar de Pendiente a En Proceso (Técnico o Director)
- *     description: Permite al técnico asignado o Director marcar la incidencia en estado En Proceso (id_estado = 2). Solo aplica si la incidencia está Pendiente (1).
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     responses:
- *       200:
- *         description: Incidencia iniciada correctamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 mensaje:
- *                   type: string
- *                 incidencia:
- *                   $ref: '#/components/schemas/Incidencia'
- *       400:
- *         $ref: '#/components/responses/Validacion'
- *       401:
- *         $ref: '#/components/responses/NoAutenticado'
- *       403:
- *         $ref: '#/components/responses/SinPermiso'
- *       404:
- *         $ref: '#/components/responses/NoEncontrado'
- *
- * /api/v1/incidencias/{id}/finalizar:
- *   put:
- *     tags: [Incidencias]
- *     summary: Finalizar incidencia y registrar solución técnica (Técnico o Director)
- *     description: Permite al técnico asignado o Director finalizar la incidencia pasando a Resuelta (id_estado = 3), registrando la solución técnica y enviando correo al solicitante.
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [descripcion_resolucion]
- *             properties:
- *               descripcion_resolucion:
- *                 type: string
- *                 maxLength: 250
- *                 example: Se reemplazó el cable HDMI y el monitor funciona correctamente.
- *     responses:
- *       200:
- *         description: Incidencia finalizada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 mensaje:
- *                   type: string
- *                 incidencia:
- *                   $ref: '#/components/schemas/Incidencia'
- *                 notificacion_email:
- *                   type: object
- *       400:
- *         $ref: '#/components/responses/Validacion'
- *       401:
- *         $ref: '#/components/responses/NoAutenticado'
- *       403:
- *         $ref: '#/components/responses/SinPermiso'
- *       404:
- *         $ref: '#/components/responses/NoEncontrado'
- *
  * /api/v1/incidencias/{id}:
  *   patch:
  *     tags: [Incidencias]
@@ -339,12 +257,6 @@ router.get('/asignadas', verificarEmpleado, incidenciaController.listarAsignadas
 
 // Crear una incidencia (solo Empleado Municipal)
 router.post('/', verificarSoloMunicipal, validarCrearIncidencia, incidenciaController.crear);
-
-// Transiciones de estado de Sistemas / Técnico
-router.put('/:id/en-proceso', verificarTecnico, validarIniciarAtencion, incidenciaController.iniciarAtencion);
-router.put('/:id/iniciar-atencion', verificarTecnico, validarIniciarAtencion, incidenciaController.iniciarAtencion);
-router.put('/:id/finalizar', verificarTecnico, validarFinalizarIncidencia, incidenciaController.finalizar);
-router.patch('/:id/finalizar', verificarTecnico, validarFinalizarIncidencia, incidenciaController.finalizar);
 
 // Asignar, finalizar o cancelar (compatibilidad PATCH)
 router.patch('/:id', verificarEmpleado, validarActualizarIncidencia, incidenciaController.actualizar);

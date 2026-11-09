@@ -169,9 +169,9 @@ psql -U postgres -d incidencias_db -f backend/database/incidencias_db.sql
 
 ### Paso 2: Configurar Variables de Entorno del Backend
 
-Editá directamente el archivo `backend/.env.example` y configurá las variables de conexión con tus credenciales locales de PostgreSQL (`DB_USER`, `DB_PASSWORD`, `DB_NAME`, etc.).
+Editá directamente el archivo `backend/.env.example` y configurá las variables de conexión con tus credenciales locales de PostgreSQL.
 
-Contenido de referencia de `backend/.env`:
+Contenido de referencia de `backend/.env.example`:
 
 ```env
 # Configuración del Servidor HTTP
@@ -230,16 +230,6 @@ npm run dev
   ```
   Una vez generado `frontend/dist`, el servidor Express en `http://localhost:3000` sirve tanto la aplicación web compilada como la API REST `/api/v1`.
 
-### Paso 5: Ejecución de Pruebas de Integración
-
-El backend incluye suites de pruebas automatizadas que verifican autenticación, RBAC, ciclo de vida de incidencias, notificaciones por correo, BREAD con bajas lógicas, paginación `LIMIT/OFFSET` y generación binaria de PDF:
-
-```bash
-cd backend
-npm test
-```
-
----
 
 ## 5. Contrato de API REST y Documentación Interactiva
 

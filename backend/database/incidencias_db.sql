@@ -442,7 +442,7 @@ INSERT INTO public.categorias VALUES (14, 'ocho', 1);
 
 INSERT INTO public.estados VALUES (1, 'Pendiente', 1);
 INSERT INTO public.estados VALUES (2, 'En Proceso', 1);
-INSERT INTO public.estados VALUES (3, 'Resuela', 1);
+INSERT INTO public.estados VALUES (3, 'Resuelta', 1);
 INSERT INTO public.estados VALUES (4, 'Cancelada', 1);
 
 

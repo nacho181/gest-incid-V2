@@ -96,6 +96,18 @@ class IncidenciaService {
       return { mensaje: 'Incidencia asignada correctamente', incidencia };
     }
 
+    // Mover a En Proceso (Sistemas o Director)
+    if (cambios.id_estado === 2) {
+      if (usuario.rol === ROLES.MUNICIPAL) {
+        throw error('No posees los permisos necesarios para iniciar la atención de incidencias', 403);
+      }
+      const incidencia = await sistemasService.iniciarAtencionIncidencia({
+        idIncidencia: id,
+        usuarioAutenticado: usuario
+      });
+      return { mensaje: `Incidencia #${id} en proceso de atención`, incidencia };
+    }
+
     // Cancelar: el Director cancela cualquiera Pendiente; el resto, solo las propias
     if (cambios.id_estado === 4) {
       const incidencia = usuario.rol === ROLES.DIRECTOR
@@ -122,6 +134,27 @@ class IncidenciaService {
     }
 
     throw error('El cambio solicitado no está soportado', 400);
+  }
+
+  async iniciarAtencion(id, usuario) {
+    if (usuario.rol === ROLES.MUNICIPAL) {
+      throw error('No posees los permisos necesarios para iniciar la atención de incidencias', 403);
+    }
+    return await sistemasService.iniciarAtencionIncidencia({
+      idIncidencia: id,
+      usuarioAutenticado: usuario
+    });
+  }
+
+  async finalizar(id, { descripcion_resolucion } = {}, usuario) {
+    if (usuario.rol === ROLES.MUNICIPAL) {
+      throw error('No posees los permisos necesarios para finalizar incidencias', 403);
+    }
+    return await sistemasService.finalizarIncidencia({
+      idIncidencia: id,
+      descripcion_resolucion,
+      usuarioAutenticado: usuario
+    });
   }
 }
 

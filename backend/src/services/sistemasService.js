@@ -1,7 +1,8 @@
 /**
  * ============================================================================
  * SERVICIO DEL EMPLEADO DE SISTEMAS
- * Lógica de negocio para incidencias asignadas y finalización con notificaciones
+ * Lógica de negocio para incidencias asignadas, inicio de atención y finalización
+ * con notificaciones oficiales.
  * ============================================================================
  */
 
@@ -10,6 +11,71 @@ import emailService from '../utils/emailService.js';
 import ROLES from '../utils/roles.js';
 
 class SistemasService {
+  /**
+   * Mueve una incidencia de estado "Pendiente" (1) a "En Proceso" (2).
+   * Solo el técnico asignado (o el Director) puede iniciar su atención.
+   */
+  async iniciarAtencionIncidencia({ idIncidencia, usuarioAutenticado }) {
+    const idInc = parseInt(idIncidencia, 10);
+    if (isNaN(idInc) || idInc <= 0) {
+      const error = new Error('El ID de la incidencia debe ser un número entero positivo');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return await incidenciaRepository.transaction(async (client) => {
+      const incidencia = await incidenciaRepository.findByIdForUpdate(idInc, client);
+      if (!incidencia) {
+        const error = new Error(`La incidencia #${idInc} no existe en el sistema.`);
+        error.statusCode = 404;
+        throw error;
+      }
+
+      if (incidencia.asignado_a !== usuarioAutenticado.id_usuario && usuarioAutenticado.rol !== ROLES.DIRECTOR) {
+        const error = new Error('No tienes autorización para atender esta incidencia ya que no está asignada a tu cargo.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      if (incidencia.id_estado === 2) {
+        const error = new Error('Esta incidencia ya se encuentra en proceso de atención.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (incidencia.id_estado === 3) {
+        const error = new Error('No se puede iniciar la atención de una incidencia que ya se encuentra finalizada.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (incidencia.id_estado === 4) {
+        const error = new Error('No se puede iniciar la atención de una incidencia que ha sido cancelada.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (incidencia.id_estado !== 1) {
+        const error = new Error('Solo se pueden pasar a En Proceso las incidencias en estado Pendiente.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const ID_EN_PROCESO = 2;
+      const actualizada = await incidenciaRepository.updateEstado(idInc, ID_EN_PROCESO, client);
+      await incidenciaRepository.addHistorialEstado(idInc, ID_EN_PROCESO, client);
+
+      return {
+        ...actualizada,
+        estado_descripcion: 'En Proceso'
+      };
+    });
+  }
+
+  /**
+   * Finaliza una incidencia que se encuentra "En Proceso" (2), pasando a "Resuelta" (3)
+   * con registro de la solución técnica y envío de correo electrónico al solicitante.
+   */
   async finalizarIncidencia({ idIncidencia, descripcion_resolucion, usuarioAutenticado }) {
     if (!descripcion_resolucion || typeof descripcion_resolucion !== 'string' || descripcion_resolucion.trim() === '') {
       const error = new Error('Debes proporcionar una descripción detallada de la resolución técnica para finalizar la incidencia.');
@@ -25,8 +91,8 @@ class SistemasService {
     }
 
     const idInc = parseInt(idIncidencia, 10);
-    if (isNaN(idInc)) {
-      const error = new Error('El ID de la incidencia debe ser un número entero');
+    if (isNaN(idInc) || idInc <= 0) {
+      const error = new Error('El ID de la incidencia debe ser un número entero positivo');
       error.statusCode = 400;
       throw error;
     }
@@ -53,6 +119,18 @@ class SistemasService {
 
       if (incidencia.id_estado === 4) {
         const error = new Error('No es posible finalizar una incidencia que ha sido cancelada.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (incidencia.id_estado === 1) {
+        const error = new Error('Solo se pueden finalizar incidencias que se encuentren En Proceso. Primero debes iniciar su atención técnica.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (incidencia.id_estado !== 2) {
+        const error = new Error('Solo se pueden finalizar incidencias en estado En Proceso.');
         error.statusCode = 400;
         throw error;
       }

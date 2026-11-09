@@ -106,7 +106,7 @@ export async function setupTestDb() {
         (1, 'Perifericos', 1), (2, 'Notebooks', 1), (3, 'PC Escritorio', 1), (4, 'CPU', 1), (5, 'Almacenamiento', 1), (6, 'Equipos de Red', 1);
 
         INSERT INTO public.estados (id_estado, descripcion, activo) VALUES
-        (1, 'Pendiente', 1), (2, 'En Proceso', 1), (3, 'Resuela', 1), (4, 'Cancelada', 1);
+        (1, 'Pendiente', 1), (2, 'En Proceso', 1), (3, 'Resuelta', 1), (4, 'Cancelada', 1);
 
         INSERT INTO public.usuarios (id_usuario, id_area, nombres, apellidos, usuario, contrasenia, avatar, rol, activo) VALUES
         (0, 3, 'Sin', 'Asignar', 'sin_asignar@concordia.gob.ar', 'none', '', 2, 1),

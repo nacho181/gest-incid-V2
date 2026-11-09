@@ -22,7 +22,6 @@ export const validarCrearIncidencia = [
   validarCampos
 ];
 
-
 export const validarActualizarIncidencia = [
   idParam,
   // Debe venir exactamente uno de los dos: id_estado o asignado_a
@@ -30,13 +29,13 @@ export const validarActualizarIncidencia = [
     const tieneEstado = req.body.id_estado !== undefined;
     const tieneAsignado = req.body.asignado_a !== undefined;
     if (tieneEstado === tieneAsignado) {
-      throw new Error('Indicá id_estado (3 o 4) o asignado_a, pero no ambos ni ninguno');
+      throw new Error('Indicá id_estado (2, 3 o 4) o asignado_a, pero no ambos ni ninguno');
     }
     return true;
   }),
   body('id_estado')
     .optional()
-    .isIn([3, 4]).withMessage('id_estado solo puede ser 3 (finalizada) o 4 (cancelada)')
+    .isIn([2, 3, 4]).withMessage('id_estado solo puede ser 2 (en proceso), 3 (finalizada) o 4 (cancelada)')
     .toInt(),
   body('asignado_a')
     .optional()
@@ -44,6 +43,20 @@ export const validarActualizarIncidencia = [
     .toInt(),
   body('descripcion_resolucion')
     .if((_, { req }) => Number(req.body.id_estado) === 3)
+    .trim()
+    .notEmpty().withMessage('Debes proporcionar la descripción de la resolución técnica')
+    .isLength({ max: 250 }).withMessage('La resolución no puede superar los 250 caracteres'),
+  validarCampos
+];
+
+export const validarIniciarAtencion = [
+  idParam,
+  validarCampos
+];
+
+export const validarFinalizarIncidencia = [
+  idParam,
+  body('descripcion_resolucion')
     .trim()
     .notEmpty().withMessage('Debes proporcionar la descripción de la resolución técnica')
     .isLength({ max: 250 }).withMessage('La resolución no puede superar los 250 caracteres'),

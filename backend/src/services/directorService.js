@@ -50,14 +50,14 @@ class DirectorService {
         throw error;
       }
 
-      const ID_EN_PROCESO = 2;
+      const ID_PENDIENTE = 1;
       const actualizada = await incidenciaRepository.updateAsignacion(
-        idInc, idTec, ID_EN_PROCESO, client
+        idInc, idTec, ID_PENDIENTE, client
       );
 
       // Solo registramos historial si el estado realmente cambió
-      if (incidencia.id_estado !== ID_EN_PROCESO) {
-        await incidenciaRepository.addHistorialEstado(idInc, ID_EN_PROCESO, client);
+      if (incidencia.id_estado !== ID_PENDIENTE) {
+        await incidenciaRepository.addHistorialEstado(idInc, ID_PENDIENTE, client);
       }
 
       return actualizada;

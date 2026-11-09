@@ -24,6 +24,16 @@ class IncidenciaController {
     const resultado = await incidenciaService.actualizar(req.params.id, req.body, req.usuario);
     res.status(200).json(resultado);
   }
+
+  async iniciarAtencion(req, res) {
+    const incidencia = await incidenciaService.iniciarAtencion(req.params.id, req.usuario);
+    res.status(200).json({ mensaje: `Incidencia #${req.params.id} iniciada y en proceso de atención`, incidencia });
+  }
+
+  async finalizar(req, res) {
+    const resultado = await incidenciaService.finalizar(req.params.id, req.body, req.usuario);
+    res.status(200).json({ mensaje: `Incidencia #${req.params.id} finalizada exitosamente`, ...resultado });
+  }
 }
 
 export default wrapController(new IncidenciaController());

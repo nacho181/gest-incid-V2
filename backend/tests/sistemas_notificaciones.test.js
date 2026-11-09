@@ -146,7 +146,32 @@ async function runTests() {
       'Authorization': `Bearer ${tokenDirector}`
     });
     assert.strictEqual(resAsignar.status, 200);
-    assert.strictEqual(resAsignar.body.incidencia.id_estado, 2, 'Asignar debe pasar la incidencia a En Proceso');
+    assert.strictEqual(resAsignar.body.incidencia.id_estado, 1, 'Asignar debe mantener la incidencia en estado Pendiente');
+    assert.strictEqual(resAsignar.body.incidencia.asignado_a, sistemasUserId, 'Debe quedar asignada al técnico');
+    console.log(`   ✅ Incidencia #${idIncidenciaNueva} asignada al técnico Carlos Perez (mantiene estado Pendiente = 1).`);
+
+    // Intentar finalizar cuando sigue en estado Pendiente debe fallar con 400
+    const resFinPendiente = await request('PUT', `/api/v1/incidencias/${idIncidenciaNueva}/finalizar`, {
+      descripcion_resolucion: 'Intento de finalización prematura'
+    }, {
+      'Authorization': `Bearer ${tokenSistemas}`
+    });
+    assert.strictEqual(resFinPendiente.status, 400, 'No se puede finalizar una incidencia en estado Pendiente');
+    console.log('   ✅ Verificación: No permite finalizar si la incidencia no está En Proceso.');
+
+    // Iniciar atención técnica para pasar a En Proceso (id_estado = 2)
+    const resIniciarAtencion = await request('PUT', `/api/v1/incidencias/${idIncidenciaNueva}/en-proceso`, null, {
+      'Authorization': `Bearer ${tokenSistemas}`
+    });
+    assert.strictEqual(resIniciarAtencion.status, 200);
+    assert.strictEqual(resIniciarAtencion.body.incidencia.id_estado, 2, 'Iniciar atención debe pasar la incidencia a En Proceso');
+    console.log(`   ✅ Incidencia #${idIncidenciaNueva} iniciada correctamente (pasa a En Proceso = 2).`);
+
+    // Intentar iniciar atención nuevamente debe fallar con 400
+    const resReIniciar = await request('PUT', `/api/v1/incidencias/${idIncidenciaNueva}/en-proceso`, null, {
+      'Authorization': `Bearer ${tokenSistemas}`
+    });
+    assert.strictEqual(resReIniciar.status, 400);
 
     // Asignar a un usuario que no es técnico (Esteban, rol 3) debe fallar
     const resAsignarMal = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
@@ -155,7 +180,6 @@ async function runTests() {
       'Authorization': `Bearer ${tokenDirector}`
     });
     assert.strictEqual(resAsignarMal.status, 400);
-    console.log(`   ✅ Incidencia #${idIncidenciaNueva} asignada al técnico Carlos Perez (En Proceso).`);
 
     // Un Municipal no puede asignar (403)
     const resAsignarMunicipal = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
@@ -184,8 +208,7 @@ async function runTests() {
     // --------------------------------------------------------------------------
     console.log(`\nTest 8: Finalizar incidencia #${idIncidenciaNueva} con resolución técnica...`);
     const resolucionTexto = 'Se reemplazó el cable HDMI y el transformador de corriente. El monitor funciona con normalidad.';
-    const resFinalizar = await request('PATCH', `/api/v1/incidencias/${idIncidenciaNueva}`, {
-      id_estado: 3,
+    const resFinalizar = await request('PUT', `/api/v1/incidencias/${idIncidenciaNueva}/finalizar`, {
       descripcion_resolucion: resolucionTexto
     }, {
       'Authorization': `Bearer ${tokenSistemas}`

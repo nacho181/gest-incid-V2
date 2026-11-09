@@ -153,7 +153,9 @@ function setupEventListenersSistemas() {
             const id = parseInt(btn.dataset.id, 10);
             if (!id) return;
 
-            if (action === 'finalizar') {
+            if (action === 'iniciar') {
+                iniciarAtencionIncidencia(id, btn);
+            } else if (action === 'finalizar') {
                 abrirModalFinalizar(id);
             } else if (action === 'ver-resolucion') {
                 abrirModalVerResolucion(id);
@@ -386,16 +388,27 @@ function renderizarTablaSistemas(lista) {
             badgeEst = '<span class="badge bg-secondary">Cancelada</span>';
         }
 
+        const esPendiente = (inc.id_estado === 1 || estDesc.includes('pendiente'));
+        const esEnProceso = (inc.id_estado === 2 || estDesc.includes('proceso'));
         const esFinalizada = (inc.id_estado === 3 || estDesc.includes('resuel') || estDesc.includes('finaliz'));
         const esCancelada = (inc.id_estado === 4 || estDesc.includes('cancel'));
 
         let botonAccion = '';
         if (esFinalizada) {
-            botonAccion = `<button data-action="ver-resolucion" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-concordia btn-row-action fw-semibold text-nowrap"><i class="bi bi-eye me-1"></i> Ver Solución</button>`;
+            botonAccion = `
+                <div class="d-inline-flex align-items-center gap-1 justify-content-end">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold py-1 px-2 text-nowrap"><i class="bi bi-check-circle-fill me-1"></i>Completada</span>
+                    <button data-action="ver-resolucion" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-concordia btn-row-action fw-semibold ms-1 text-nowrap" title="Ver solución técnica"><i class="bi bi-eye me-1"></i>Ver</button>
+                </div>
+            `;
         } else if (esCancelada) {
             botonAccion = `<span class="text-muted small">Sin acciones</span>`;
+        } else if (esPendiente) {
+            botonAccion = `<button data-action="iniciar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-outline-primary btn-row-action fw-semibold text-nowrap" title="Iniciar atención técnica y pasar a En Proceso"><i class="bi bi-play-circle me-1"></i> Comenzar</button>`;
+        } else if (esEnProceso) {
+            botonAccion = `<button data-action="finalizar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-success btn-row-action fw-semibold text-nowrap" title="Finalizar incidencia y registrar solución técnica"><i class="bi bi-check2-circle me-1"></i> Resolver Incidencia</button>`;
         } else {
-            botonAccion = `<button data-action="finalizar" data-id="${inc.id_incidencia}" class="btn btn-sm btn-concordia btn-row-action fw-semibold text-nowrap"><i class="bi bi-check2-circle me-1"></i> Resolver Incidencia</button>`;
+            botonAccion = `<span class="text-muted small">—</span>`;
         }
 
         return `
@@ -414,6 +427,46 @@ function renderizarTablaSistemas(lista) {
             </tr>
         `;
     }).join('');
+}
+
+/**
+ * Inicia la atención técnica de una incidencia asignada.
+ * PUT /incidencias/:id/en-proceso
+ */
+async function iniciarAtencionIncidencia(idIncidencia, btnElement) {
+    if (!idIncidencia) return;
+
+    const confirmar = window.confirm(`¿Deseas iniciar la atención de la incidencia #${idIncidencia} y pasarla a estado "En Proceso"?`);
+    if (!confirmar) return;
+
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Iniciando...`;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/incidencias/${idIncidencia}/en-proceso`, {
+            method: 'PUT',
+            headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.mensaje || 'No fue posible iniciar la atención de la incidencia. Por favor, intente nuevamente.');
+        }
+
+        mostrarToast(`Incidencia #${idIncidencia} iniciada. Ahora se encuentra En Proceso.`, 'exito');
+        await cargarIncidenciasAsignadas(paginaActualSistemas);
+
+    } catch (error) {
+        console.error('Error al iniciar atención de incidencia:', error);
+        mostrarToast(error.message, 'error');
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = `<i class="bi bi-play-circle me-1"></i> Comenzar`;
+        }
+    }
 }
 
 function abrirModalFinalizar(idIncidencia) {
@@ -435,7 +488,7 @@ function abrirModalFinalizar(idIncidencia) {
 
 /**
  * Finaliza la incidencia.
- * PATCH /incidencias/:id con { id_estado: 3, descripcion_resolucion }.
+ * PUT /incidencias/:id/finalizar con { descripcion_resolucion }.
  */
 async function enviarFinalizacionIncidencia(e) {
     e.preventDefault();
@@ -454,10 +507,10 @@ async function enviarFinalizacionIncidencia(e) {
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Procesando...`;
 
-        const response = await fetch(`${API_BASE_URL}/incidencias/${idFinalizada}`, {
-            method: 'PATCH',
+        const response = await fetch(`${API_BASE_URL}/incidencias/${idFinalizada}/finalizar`, {
+            method: 'PUT',
             headers: getAuthHeaders(),
-            body: JSON.stringify({ id_estado: 3, descripcion_resolucion })
+            body: JSON.stringify({ descripcion_resolucion })
         });
 
         const data = await response.json();

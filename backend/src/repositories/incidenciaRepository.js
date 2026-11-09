@@ -190,12 +190,12 @@ class IncidenciaRepository {
     return rows[0] || null;
   }
 
-  // Solo finaliza si sigue Pendiente o En Proceso (guarda contra carreras)
+  // Solo finaliza si sigue En Proceso (guarda contra carreras)
   async finalizar(idIncidencia, descripcionResolucion, executor = db) {
     const { rows } = await executor.query(
       `UPDATE public.incidencias
           SET id_estado = 3, descripcion_resolucion = $1
-        WHERE id_incidencia = $2 AND id_estado IN (1, 2)
+        WHERE id_incidencia = $2 AND id_estado = 2
         RETURNING *`,
       [descripcionResolucion, idIncidencia]
     );

@@ -9,12 +9,18 @@
 import express from 'express';
 import incidenciaController from '../controllers/incidenciaController.js';
 import { verificarToken, autorizarRol } from '../middlewares/authMiddleware.js';
-import { validarCrearIncidencia, validarActualizarIncidencia } from '../validators/incidenciaValidators.js';
+import {
+  validarCrearIncidencia,
+  validarActualizarIncidencia,
+  validarIniciarAtencion,
+  validarFinalizarIncidencia
+} from '../validators/incidenciaValidators.js';
 import ROLES from '../utils/roles.js';
 
 const router = express.Router();
 
 const verificarEmpleado = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS, ROLES.MUNICIPAL)];
+const verificarTecnico = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS)];
 const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
 
 /**
@@ -158,13 +164,96 @@ const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
  *       403:
  *         $ref: '#/components/responses/SinPermiso'
  *
+ * /api/v1/incidencias/{id}/en-proceso:
+ *   put:
+ *     tags: [Incidencias]
+ *     summary: Iniciar atención técnica y pasar de Pendiente a En Proceso (Técnico o Director)
+ *     description: Permite al técnico asignado o Director marcar la incidencia en estado En Proceso (id_estado = 2). Solo aplica si la incidencia está Pendiente (1).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Incidencia iniciada correctamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mensaje:
+ *                   type: string
+ *                 incidencia:
+ *                   $ref: '#/components/schemas/Incidencia'
+ *       400:
+ *         $ref: '#/components/responses/Validacion'
+ *       401:
+ *         $ref: '#/components/responses/NoAutenticado'
+ *       403:
+ *         $ref: '#/components/responses/SinPermiso'
+ *       404:
+ *         $ref: '#/components/responses/NoEncontrado'
+ *
+ * /api/v1/incidencias/{id}/finalizar:
+ *   put:
+ *     tags: [Incidencias]
+ *     summary: Finalizar incidencia y registrar solución técnica (Técnico o Director)
+ *     description: Permite al técnico asignado o Director finalizar la incidencia pasando a Resuelta (id_estado = 3), registrando la solución técnica y enviando correo al solicitante.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [descripcion_resolucion]
+ *             properties:
+ *               descripcion_resolucion:
+ *                 type: string
+ *                 maxLength: 250
+ *                 example: Se reemplazó el cable HDMI y el monitor funciona correctamente.
+ *     responses:
+ *       200:
+ *         description: Incidencia finalizada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mensaje:
+ *                   type: string
+ *                 incidencia:
+ *                   $ref: '#/components/schemas/Incidencia'
+ *                 notificacion_email:
+ *                   type: object
+ *       400:
+ *         $ref: '#/components/responses/Validacion'
+ *       401:
+ *         $ref: '#/components/responses/NoAutenticado'
+ *       403:
+ *         $ref: '#/components/responses/SinPermiso'
+ *       404:
+ *         $ref: '#/components/responses/NoEncontrado'
+ *
  * /api/v1/incidencias/{id}:
  *   patch:
  *     tags: [Incidencias]
- *     summary: Asignar, finalizar o cancelar una incidencia
+ *     summary: Asignar, iniciar atención, finalizar o cancelar una incidencia
  *     description: >
  *       Se envía exactamente uno de estos cambios.
- *       Asignar (solo Director): { asignado_a }, la incidencia pasa a En Proceso.
+ *       Asignar (solo Director): { asignado_a }, la incidencia queda asignada en estado Pendiente (1).
+ *       Iniciar atención (Sistemas o Director): { id_estado: 2 }, pasa a En Proceso.
  *       Finalizar (Sistemas o Director): { id_estado: 3, descripcion_resolucion }.
  *       Cancelar: { id_estado: 4 }, solo si está Pendiente. El Municipal cancela las propias y el Director cualquiera.
  *       Al finalizar o cancelar se notifica por correo al solicitante.
@@ -185,8 +274,8 @@ const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
  *             properties:
  *               id_estado:
  *                 type: integer
- *                 enum: [3, 4]
- *                 description: 3 finaliza, 4 cancela
+ *                 enum: [2, 3, 4]
+ *                 description: 2 inicia atención, 3 finaliza, 4 cancela
  *               asignado_a:
  *                 type: integer
  *                 description: ID de un técnico activo del área de Sistemas
@@ -198,6 +287,9 @@ const verificarSoloMunicipal = [verificarToken, autorizarRol(ROLES.MUNICIPAL)];
  *             asignar:
  *               summary: Asignar a un técnico (Director)
  *               value: { asignado_a: 1 }
+ *             iniciar:
+ *               summary: Iniciar atención (Sistemas)
+ *               value: { id_estado: 2 }
  *             finalizar:
  *               summary: Finalizar con la resolución técnica
  *               value: { id_estado: 3, descripcion_resolucion: Se reemplazó el cable HDMI y el monitor funciona con normalidad }
@@ -248,7 +340,13 @@ router.get('/asignadas', verificarEmpleado, incidenciaController.listarAsignadas
 // Crear una incidencia (solo Empleado Municipal)
 router.post('/', verificarSoloMunicipal, validarCrearIncidencia, incidenciaController.crear);
 
-// Asignar, finalizar o cancelar
+// Transiciones de estado de Sistemas / Técnico
+router.put('/:id/en-proceso', verificarTecnico, validarIniciarAtencion, incidenciaController.iniciarAtencion);
+router.put('/:id/iniciar-atencion', verificarTecnico, validarIniciarAtencion, incidenciaController.iniciarAtencion);
+router.put('/:id/finalizar', verificarTecnico, validarFinalizarIncidencia, incidenciaController.finalizar);
+router.patch('/:id/finalizar', verificarTecnico, validarFinalizarIncidencia, incidenciaController.finalizar);
+
+// Asignar, finalizar o cancelar (compatibilidad PATCH)
 router.patch('/:id', verificarEmpleado, validarActualizarIncidencia, incidenciaController.actualizar);
 
 export default router;

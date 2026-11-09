@@ -106,7 +106,8 @@ export function crearReporteIncidenciasPdf({ incidencias = [], filtros = {} }, o
   const doc = new PDFDocument({
     margin: 40,
     size: 'A4',
-    bufferPages: true
+    bufferPages: true,
+    autoFirstPage: true
   });
 
   // Conectar el stream de salida
@@ -175,8 +176,9 @@ export function crearReporteIncidenciasPdf({ incidencias = [], filtros = {} }, o
     currentY += 40;
   } else {
     incidencias.forEach((inc, index) => {
-      // Salto de página si excede el límite vertical
-      if (currentY + ROW_HEIGHT > MAX_Y) {
+      // Salto de página preventivo: solo se genera una nueva página si la fila actual
+      // supera el límite vertical MAX_Y y existe efectivamente una fila restante por imprimir.
+      if (currentY + ROW_HEIGHT > MAX_Y && index < incidencias.length) {
         doc.addPage();
         currentY = 40;
         dibujarCabeceraTabla(doc, currentY);
@@ -253,10 +255,16 @@ export function crearReporteIncidenciasPdf({ incidencias = [], filtros = {} }, o
     });
   }
 
-  // 4. PIE DE PÁGINA VECTORIAL (En todas las páginas con número de página y total)
+  // 4. PIE DE PÁGINA VECTORIAL (En todas las páginas existentes en el búfer)
+  // Se itera sobre las páginas previamente creadas sin forzar la creación de páginas vacías
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
+
+    // Desactivar temporalmente el margen inferior de PDFKit durante el renderizado del footer
+    // para evitar que rebase la altura útil (841.89 pt) y fuerce una nueva página innecesaria.
+    const oldBottomMargin = doc.page.margins.bottom;
+    doc.page.margins.bottom = 0;
 
     // Línea divisoria pie de página
     doc.moveTo(MARGIN_LEFT, 800)
@@ -270,17 +278,20 @@ export function crearReporteIncidenciasPdf({ incidencias = [], filtros = {} }, o
       'Municipalidad de Concordia — Dirección de Sistemas (Intranet Oficial)',
       MARGIN_LEFT,
       808,
-      { width: 300, align: 'left' }
+      { width: 300, align: 'left', lineBreak: false }
     );
     doc.text(
       `Página ${i + 1} de ${range.count}`,
       MARGIN_LEFT + 315,
       808,
-      { width: 200, align: 'right' }
+      { width: 200, align: 'right', lineBreak: false }
     );
+
+    // Restaurar margen inferior original
+    doc.page.margins.bottom = oldBottomMargin;
   }
 
-  // Finalizar el documento y cerrar el stream
+  // Finalizar el documento de forma inmediata sin saltos de línea sobrantes
   doc.end();
 }
 

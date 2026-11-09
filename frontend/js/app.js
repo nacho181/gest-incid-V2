@@ -515,7 +515,7 @@ async function cargarMisIncidencias(pagina = 1) {
                 badgeEstado = '<span class="badge bg-warning text-dark">Pendiente</span>';
             } else if (estadoNom.includes('proceso') || inc.id_estado === 2) {
                 badgeEstado = '<span class="badge bg-info text-dark">En Proceso</span>';
-            } else if (estadoNom.includes('resuela') || estadoNom.includes('resuelta') || inc.id_estado === 3) {
+            } else if (estadoNom.includes('resuelta') || estadoNom.includes('resuela') || estadoNom.includes('finalizada') || inc.id_estado === 3) {
                 badgeEstado = '<span class="badge bg-success">Resuelta</span>';
             } else if (estadoNom.includes('cancelada') || inc.id_estado === 4) {
                 badgeEstado = '<span class="badge bg-secondary">Cancelada</span>';

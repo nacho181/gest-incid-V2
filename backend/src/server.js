@@ -96,7 +96,7 @@ app.use('/api/v1/categorias', categoriaRoutes);
 app.use('/api/v1/articulos', articuloRoutes);
 app.use('/api/v1/areas', areaRoutes);
 
-// Estadísticas del Director: /dashboard y /reportes
+// Estadísticas y Reportes PDF del Director: /dashboard y /director/reportes/pdf
 app.use('/api/v1', estadisticasRoutes);
 
 // Ruta de Comprobación de Salud del Servidor (Healthcheck)

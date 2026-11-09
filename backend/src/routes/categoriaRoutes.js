@@ -17,6 +17,7 @@ const router = express.Router();
 
 // Middleware estricto para validar token JWT y verificar roles del Área de Sistemas
 const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS)];
+const verificarLectura = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS, ROLES.MUNICIPAL)];
 
 /**
  * @openapi
@@ -139,10 +140,10 @@ const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS)];
  */
 
 // BROWSE: Listar categorías
-router.get('/', verificarAdmin, categoriaController.getCategorias);
+router.get('/', verificarLectura, categoriaController.getCategorias);
 
 // READ: Obtener detalle de una categoría por ID
-router.get('/:id', verificarAdmin, validarId, categoriaController.getCategoriaById);
+router.get('/:id', verificarLectura, validarId, categoriaController.getCategoriaById);
 
 // ADD: Crear una nueva categoría
 router.post(

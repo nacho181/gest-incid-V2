@@ -114,10 +114,25 @@ function setupEventListenersSistemas() {
     // Refrescar listado
     const btnRefrescar = document.getElementById('btnRefrescar');
     if (btnRefrescar) {
-        btnRefrescar.addEventListener('click', (e) => {
-            e.currentTarget?.blur();
-            cargarIncidenciasAsignadas();
-            mostrarToast('Listado de incidencias actualizado', 'info');
+        btnRefrescar.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn?.blur();
+            const icon = btn?.querySelector('i');
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('spin');
+            btn?.classList.add('opacity-75');
+
+            try {
+                await cargarIncidenciasAsignadas(paginaActualSistemas, true);
+                mostrarToast('Listado de incidencias actualizado correctamente.', 'info');
+            } catch (err) {
+                console.error('Error al actualizar incidencias asignadas:', err);
+                mostrarToast('Error al actualizar el listado de incidencias.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('spin');
+                btn?.classList.remove('opacity-75');
+            }
         });
     }
 
@@ -167,16 +182,16 @@ function setupEventListenersSistemas() {
 /**
  * GET /incidencias: para el rol Sistemas devuelve las incidencias asignadas a su cargo con paginación LIMIT/OFFSET.
  */
-async function cargarIncidenciasAsignadas(pagina = 1) {
+async function cargarIncidenciasAsignadas(pagina = 1, forzarRefresco = false) {
     paginaActualSistemas = pagina;
     const tbody = document.getElementById('tbodyIncidenciasSistemas');
     if (!tbody) return;
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="8" class="text-center text-muted py-5">
-                <div class="spinner-border spinner-border-sm text-concordia me-2" role="status"></div>
-                Cargando incidencias asignadas...
+            <td colspan="100%" class="text-center text-muted py-4">
+                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                Actualizando datos...
             </td>
         </tr>
     `;
@@ -187,7 +202,8 @@ async function cargarIncidenciasAsignadas(pagina = 1) {
         else if (filtroEstadoActual === 'proceso') filtroUrl = '&id_estado=2';
         else if (filtroEstadoActual === 'resueltas') filtroUrl = '&id_estado=3';
 
-        const response = await fetch(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteSistemas}${filtroUrl}`, {
+        const cacheBuster = forzarRefresco ? `&_t=${Date.now()}` : '';
+        const response = await fetch(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteSistemas}${filtroUrl}${cacheBuster}`, {
             headers: getAuthHeaders()
         });
 
@@ -237,11 +253,12 @@ async function cargarIncidenciasAsignadas(pagina = 1) {
         console.error('Error cargando incidencias asignadas:', error);
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center text-danger py-4">
-                    No fue posible cargar las incidencias asignadas. Verifique su conexión o inicie sesión nuevamente.
+                <td colspan="100%" class="text-center text-danger py-4">
+                    <i class="bi bi-exclamation-triangle me-1"></i> Error al cargar datos: ${escapeHtml(error.message || 'No fue posible cargar las incidencias asignadas')}
                 </td>
             </tr>
         `;
+        throw error;
     }
 }
 

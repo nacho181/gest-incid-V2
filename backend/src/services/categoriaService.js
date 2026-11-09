@@ -10,11 +10,19 @@ import { parsePagination, parseSort, buildPaginatedResponse } from '../utils/pag
 
 class CategoriaService {
   async getCategorias(query = {}) {
-    const { incluir_inactivos, todos, buscar, search, q } = query;
-    const traerTodos = incluir_inactivos === 'true' || incluir_inactivos === '1' || todos === 'true' || todos === '1';
+    const { incluir_inactivos, todos, all, activo, buscar, search, q } = query;
+    
+    let traerTodos = false;
+    if (activo !== undefined && (activo === '1' || activo === 1 || activo === 'true')) {
+      traerTodos = false;
+    } else if (activo !== undefined && (activo === '0' || activo === 0 || activo === 'false')) {
+      traerTodos = true;
+    } else {
+      traerTodos = incluir_inactivos === 'true' || incluir_inactivos === '1' || (todos === 'true' && all !== 'true');
+    }
 
     const textoBusqueda = buscar || search || q || null;
-    const { page, limit, offset } = parsePagination(query, 10);
+    const { page, limit, offset } = parsePagination(query, 10, 1000);
     const { sortSql } = parseSort(query, CATEGORIAS_SORT_MAP, 'id_categoria', 'ASC');
 
     const { rows, total } = await categoriaRepository.findAllPaginated({

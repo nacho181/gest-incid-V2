@@ -26,16 +26,6 @@ const verificarDirector = [verificarToken, autorizarRol(ROLES.DIRECTOR)];
  *       200:
  *         description: Totales por estado, por fecha e incidencias prioritarias
  *
- * /api/v1/reportes:
- *   get:
- *     tags: [Director]
- *     summary: Datos para reportes estadísticos
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Datos estadísticos obtenidos
- *
  * /api/v1/director/reportes/pdf:
  *   get:
  *     tags: [Director]
@@ -77,9 +67,6 @@ const verificarDirector = [verificarToken, autorizarRol(ROLES.DIRECTOR)];
 
 // Resumen del dashboard (totales por estado, totales por fecha, prioritarias)
 router.get('/dashboard', verificarDirector, directorController.getDashboardSummary);
-
-// Datos para reportes estadísticos
-router.get('/reportes', verificarDirector, directorController.getReportesEstadisticos);
 
 // Generación y descarga de reporte oficial de incidencias en formato PDF (PDFKit)
 router.get('/director/reportes/pdf', verificarDirector, directorController.generarReportePdf);

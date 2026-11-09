@@ -97,10 +97,25 @@ function setupEventListeners() {
     // Refrescar incidencias
     const btnRefresh = document.getElementById('btnRefreshIncidencias');
     if (btnRefresh) {
-        btnRefresh.addEventListener('click', (e) => {
-            e.currentTarget?.blur();
-            cargarMisIncidencias();
-            mostrarToast('Lista de incidencias actualizada', 'info');
+        btnRefresh.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn?.blur();
+            const icon = btn?.querySelector('i');
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('spin');
+            btn?.classList.add('opacity-75');
+
+            try {
+                await cargarMisIncidencias(paginaActualMisIncidencias, true);
+                mostrarToast('Listado de incidencias actualizado correctamente.', 'info');
+            } catch (error) {
+                console.error('Error al actualizar incidencias:', error);
+                mostrarToast('Error al actualizar las incidencias.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('spin');
+                btn?.classList.remove('opacity-75');
+            }
         });
     }
 
@@ -354,9 +369,10 @@ function inicializarTomSelect() {
 
     tomSelectArticulo = new TomSelect('#selectArticulo', {
         create: false,
-        placeholder: '-- Seleccionar Artículo --',
+        placeholder: 'Buscar y seleccionar artículo o equipo...',
         allowEmptyOption: false,
-        maxOptions: 500,
+        plugins: ['clear_button'],
+        maxOptions: 1000,
         sortField: {
             field: 'text',
             direction: 'asc'
@@ -365,11 +381,11 @@ function inicializarTomSelect() {
 }
 
 /**
- * Consulta y carga el catálogo de artículos.
+ * Consulta y carga el catálogo completo de artículos activos (límite ampliado).
  */
 async function cargarArticulos() {
     try {
-        const response = await fetchConAuth(`${API_BASE_URL}/articulos`);
+        const response = await fetchConAuth(`${API_BASE_URL}/articulos?limit=1000`);
         if (!response.ok) throw new Error('Error al obtener artículos');
 
         const result = await response.json();
@@ -382,12 +398,16 @@ async function cargarArticulos() {
                 tomSelectArticulo = null;
             }
 
-            selectArticulo.innerHTML = '<option value="" selected></option>';
+            selectArticulo.innerHTML = '<option value=""></option>';
             listaArticulosCache.forEach(art => {
-                const option = document.createElement('option');
-                option.value = art.id_articulo;
-                option.textContent = `${art.descripcion} (${art.categoria_descripcion || art.categoria_nombre || 'General'})`;
-                selectArticulo.appendChild(option);
+                if (art.activo === 1) {
+                    const option = document.createElement('option');
+                    option.value = art.id_articulo;
+                    const cat = art.categoria_descripcion || art.categoria_nombre || 'General';
+                    const area = art.area_descripcion || art.area_nombre || 'Área General';
+                    option.textContent = `${art.descripcion} (${cat} — ${area})`;
+                    selectArticulo.appendChild(option);
+                }
             });
 
             inicializarTomSelect();
@@ -454,11 +474,11 @@ function filtrarArticulos(query) {
 
 function seleccionarArticuloParaIncidencia(idArticulo) {
     if (tomSelectArticulo) {
-        tomSelectArticulo.setValue(idArticulo);
+        tomSelectArticulo.setValue(String(idArticulo));
     } else {
         const selectArticulo = document.getElementById('selectArticulo');
         if (selectArticulo) {
-            selectArticulo.value = idArticulo;
+            selectArticulo.value = String(idArticulo);
         }
     }
 
@@ -475,15 +495,26 @@ function seleccionarArticuloParaIncidencia(idArticulo) {
  * Consulta y carga las incidencias creadas por el usuario autenticado con paginación LIMIT/OFFSET.
  * GET /incidencias o /incidencias/mis-incidencias
  */
-async function cargarMisIncidencias(pagina = 1) {
+async function cargarMisIncidencias(pagina = 1, forzarRefresco = false) {
     paginaActualMisIncidencias = pagina;
     const tbody = document.getElementById('tbodyIncidencias');
-    if (!tbody || !currentUser) return;
+    if (!tbody) return;
 
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-concordia me-2"></div>Cargando incidencias...</td></tr>`;
+    if (!currentUser) {
+        try {
+            const savedUser = localStorage.getItem('user_data') || localStorage.getItem('usuario');
+            if (savedUser) currentUser = JSON.parse(savedUser);
+        } catch (e) {
+            currentUser = null;
+        }
+    }
+    if (!currentUser) return;
+
+    tbody.innerHTML = '<tr><td colspan="100%" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Actualizando datos...</td></tr>';
 
     try {
-        const response = await fetchConAuth(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteMisIncidencias}`);
+        const cacheBuster = forzarRefresco ? `&_t=${Date.now()}` : '';
+        const response = await fetchConAuth(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteMisIncidencias}${cacheBuster}`);
         if (!response.ok) throw new Error('Error al obtener incidencias');
 
         const result = await response.json();
@@ -501,7 +532,7 @@ async function cargarMisIncidencias(pagina = 1) {
         tbody.innerHTML = '';
 
         if (incidencias.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No registra incidencias reportadas hasta el momento.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="100%" class="text-center text-muted py-4">No registra incidencias reportadas hasta el momento.</td></tr>`;
             actualizarPaginadorMisIncidencias();
             return;
         }
@@ -558,7 +589,8 @@ async function cargarMisIncidencias(pagina = 1) {
 
     } catch (error) {
         console.error('Error cargando incidencias:', error);
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">Ocurrió un error al cargar sus incidencias. Por favor, intente nuevamente.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="100%" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i> Error al cargar datos: ${escapeHtml(error.message || 'No fue posible conectar con el servidor')}</td></tr>`;
+        throw error;
     }
 }
 

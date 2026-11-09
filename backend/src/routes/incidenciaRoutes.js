@@ -258,6 +258,12 @@ router.get('/asignadas', verificarEmpleado, incidenciaController.listarAsignadas
 // Crear una incidencia (solo Empleado Municipal)
 router.post('/', verificarSoloMunicipal, validarCrearIncidencia, incidenciaController.crear);
 
+// Transiciones directas de estado para Empleado de Sistemas / Técnico
+router.put('/:id/en-proceso', verificarTecnico, validarIniciarAtencion, incidenciaController.iniciarAtencion);
+router.put('/:id/iniciar-atencion', verificarTecnico, validarIniciarAtencion, incidenciaController.iniciarAtencion);
+router.put('/:id/finalizar', verificarTecnico, validarFinalizarIncidencia, incidenciaController.finalizar);
+router.patch('/:id/finalizar', verificarTecnico, validarFinalizarIncidencia, incidenciaController.finalizar);
+
 // Asignar, finalizar o cancelar (compatibilidad PATCH)
 router.patch('/:id', verificarEmpleado, validarActualizarIncidencia, incidenciaController.actualizar);
 

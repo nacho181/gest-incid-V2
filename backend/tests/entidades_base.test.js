@@ -240,7 +240,7 @@ async function runTests() {
     console.log(`   ✅ Artículo #${idArtCreado} reactivado exitosamente.`);
 
     // 16. Validaciones de Artículo
-    console.log('Test 16: Validaciones de Artículo (Campos requeridos, FK inválidas y 404)...');
+    console.log('Test 16: Validaciones de Artículo (Campos requeridos, FK inválidas, FKs inactivas y 404)...');
     const resValArtFalta = await request('POST', '/api/v1/articulos', { descripcion: 'Incompleto' }, authHeaders);
     assert.strictEqual(resValArtFalta.status, 400, 'Debe rechazar artículo sin categoría o área');
     const resValArtCatInvalida = await request('POST', '/api/v1/articulos', {
@@ -249,6 +249,18 @@ async function runTests() {
       id_area: 1
     }, authHeaders);
     assert.strictEqual(resValArtCatInvalida.status, 400, 'Debe rechazar categoría inexistente con 400');
+
+    // Validación de FK inactiva: desactivar categoría y probar crear artículo
+    await request('DELETE', `/api/v1/categorias/${idCatCreada}`, null, authHeaders);
+    const resValArtCatInactiva = await request('POST', '/api/v1/articulos', {
+      descripcion: 'Test con Categoría Inactiva',
+      id_categoria: idCatCreada,
+      id_area: 1
+    }, authHeaders);
+    assert.strictEqual(resValArtCatInactiva.status, 400, 'Debe rechazar creación con categoría inactiva con 400 Bad Request');
+    // Reactivar para no afectar pruebas posteriores
+    await request('PATCH', `/api/v1/categorias/${idCatCreada}`, { activo: 1 }, authHeaders);
+
     const resValArt404 = await request('GET', '/api/v1/articulos/999999', null, authHeaders);
     assert.strictEqual(resValArt404.status, 404, 'Debe devolver 404 si el artículo no existe');
     console.log('   ✅ Validaciones de artículo comprobadas correctamente.');

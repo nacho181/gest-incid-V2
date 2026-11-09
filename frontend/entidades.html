@@ -172,7 +172,7 @@
                             <label class="form-check-label small fw-semibold text-muted text-nowrap mb-0" for="chkInactivosArticulos">Mostrar inactivos</label>
                         </div>
                         <select id="filtroCategoriaArticulo" class="form-select form-select-sm" style="width: auto; min-width: 170px;" aria-label="Filtrar por categoría">
-                            <option value="">Todas las Categorías</option>
+                            <option value=""></option>
                         </select>
                         <select id="filtroAreaArticulo" class="form-select form-select-sm" style="width: auto; min-width: 170px;" aria-label="Filtrar por área">
                             <option value="">Todas las Áreas</option>
@@ -305,6 +305,10 @@
                 <form id="formArticulo">
                     <div class="modal-body p-4">
                         <input type="hidden" id="txtArtId">
+                        <div id="alertaCategoriaInactiva" class="alert alert-warning py-2 px-3 small d-none mb-3" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            <span id="txtAlertaCatInactiva">La categoría asignada previamente se encuentra inactiva. Debe seleccionar una categoría activa válida antes de guardar los cambios.</span>
+                        </div>
                         <div class="mb-3">
                             <label for="txtArtDescripcion" class="form-label fw-semibold">Descripción del Artículo *</label>
                             <input type="text" id="txtArtDescripcion" class="form-control" placeholder="Ej: Impresora Láser HP LaserJet Pro" required>
@@ -312,7 +316,7 @@
                         <div class="mb-3">
                             <label for="selectArtCategoria" class="form-label fw-semibold">Categoría *</label>
                             <select id="selectArtCategoria" class="form-select" required>
-                                <option value="">-- Seleccionar Categoría --</option>
+                                <option value=""></option>
                             </select>
                         </div>
                         <div class="mb-3">

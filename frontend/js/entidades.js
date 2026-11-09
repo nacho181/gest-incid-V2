@@ -5,6 +5,7 @@
  */
 
 import * as bootstrap from 'bootstrap';
+import TomSelect from 'tom-select';
 window.bootstrap = bootstrap;
 
 const API_BASE_URL = '/api/v1';
@@ -43,9 +44,14 @@ function authFetch(url, options = {}) {
 }
 
 // Estado local
-let categoriasCache = [];
+let categoriasCache = []; // Categorías para la tabla paginada
+let categoriasActivasCache = []; // Categorías activas completas para selectores TomSelect
 let articulosCache = [];
 let areasCache = [];
+
+// Instancias de TomSelect para Categorías
+let tomSelectFiltroCategoria = null;
+let tomSelectArtCategoria = null;
 
 // Paginación de Categorías
 let paginaActualCategorias = 1;
@@ -95,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 5. Cargar datos iniciales
     cargarCategorias();
+    cargarCategoriasParaSelectores();
     cargarAreas();
     cargarArticulos();
 });
@@ -161,11 +168,29 @@ function setupEventListeners() {
     // Categorías: Formulario submit
     document.getElementById('formCategoria')?.addEventListener('submit', guardarCategoria);
     // Categorías: Refrescar
-    document.getElementById('btnRefrescarCategorias')?.addEventListener('click', (e) => {
-        e.currentTarget?.blur();
-        cargarCategorias();
-        mostrarToast('Catálogo de categorías actualizado.', 'info');
-    });
+    const btnRefrescarCategorias = document.getElementById('btnRefrescarCategorias');
+    if (btnRefrescarCategorias) {
+        btnRefrescarCategorias.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn?.blur();
+            const icon = btn?.querySelector('i');
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('spin');
+            btn?.classList.add('opacity-75');
+
+            try {
+                await cargarCategorias(paginaActualCategorias, true);
+                mostrarToast('Catálogo de categorías actualizado correctamente.', 'info');
+            } catch (err) {
+                console.error('Error al refrescar categorías:', err);
+                mostrarToast('Error al actualizar el catálogo de categorías.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('spin');
+                btn?.classList.remove('opacity-75');
+            }
+        });
+    }
     // Categorías: Filtro checkbox inactivos
     document.getElementById('chkInactivosCategorias')?.addEventListener('change', cargarCategorias);
     // Categorías: Búsqueda reactiva
@@ -176,11 +201,29 @@ function setupEventListeners() {
     // Artículos: Formulario submit
     document.getElementById('formArticulo')?.addEventListener('submit', guardarArticulo);
     // Artículos: Refrescar
-    document.getElementById('btnRefrescarArticulos')?.addEventListener('click', (e) => {
-        e.currentTarget?.blur();
-        cargarArticulos();
-        mostrarToast('Catálogo de artículos actualizado.', 'info');
-    });
+    const btnRefrescarArticulos = document.getElementById('btnRefrescarArticulos');
+    if (btnRefrescarArticulos) {
+        btnRefrescarArticulos.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn?.blur();
+            const icon = btn?.querySelector('i');
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('spin');
+            btn?.classList.add('opacity-75');
+
+            try {
+                await cargarArticulos(paginaActualArticulos, true);
+                mostrarToast('Catálogo de artículos actualizado correctamente.', 'info');
+            } catch (err) {
+                console.error('Error al refrescar artículos:', err);
+                mostrarToast('Error al actualizar el catálogo de artículos.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('spin');
+                btn?.classList.remove('opacity-75');
+            }
+        });
+    }
     // Artículos: Filtro checkbox inactivos
     document.getElementById('chkInactivosArticulos')?.addEventListener('change', cargarArticulos);
     // Artículos: Filtro categoría
@@ -247,9 +290,12 @@ function setupEventListeners() {
 /**
  * BROWSE: Carga el listado de categorías desde la API con paginación LIMIT/OFFSET.
  */
-async function cargarCategorias(pagina = 1) {
+async function cargarCategorias(pagina = 1, forzarRefresco = false) {
     paginaActualCategorias = pagina;
     const tbody = document.getElementById('tbodyCategorias');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="100%" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Actualizando datos...</td></tr>';
+    }
     const chkInactivos = document.getElementById('chkInactivosCategorias');
     const incluirInactivos = chkInactivos ? chkInactivos.checked : false;
     const buscar = (document.getElementById('txtBuscarCategoria')?.value || '').trim();
@@ -258,6 +304,7 @@ async function cargarCategorias(pagina = 1) {
         let url = `${API_BASE_URL}/categorias?page=${pagina}&limit=${limiteCategorias}`;
         if (incluirInactivos) url += '&incluir_inactivos=true';
         if (buscar) url += `&buscar=${encodeURIComponent(buscar)}`;
+        if (forzarRefresco) url += `&_t=${Date.now()}`;
 
         const response = await authFetch(url);
         if (!response.ok) throw new Error('Error al consultar categorías');
@@ -275,7 +322,7 @@ async function cargarCategorias(pagina = 1) {
         totalPaginasCategorias = pagination.total_pages || 1;
 
         renderizarTablaCategorias(categoriasCache);
-        poblarSelectsCategorias();
+        await cargarCategoriasParaSelectores();
 
         renderizarPaginador({
             ulElement: document.getElementById('paginacionCategorias'),
@@ -290,7 +337,10 @@ async function cargarCategorias(pagina = 1) {
         });
     } catch (error) {
         console.error('Error cargando categorías:', error);
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">Error al cargar categorías: ${escapeHtml(error.message)}</td></tr>`;
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="100%" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i> Error al cargar datos: ${escapeHtml(error.message || 'Error de conexión')}</td></tr>`;
+        }
+        throw error;
     }
 }
 
@@ -485,13 +535,16 @@ async function cargarAreas() {
 /**
  * BROWSE: Carga el listado de artículos desde la API con paginación LIMIT/OFFSET.
  */
-async function cargarArticulos(pagina = 1) {
+async function cargarArticulos(pagina = 1, forzarRefresco = false) {
     paginaActualArticulos = pagina;
     const tbody = document.getElementById('tbodyArticulos');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="100%" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Actualizando datos...</td></tr>';
+    }
     const chkInactivos = document.getElementById('chkInactivosArticulos');
     const incluirInactivos = chkInactivos ? chkInactivos.checked : false;
     const buscar = (document.getElementById('txtBuscarArticulo')?.value || '').trim();
-    const filtroCat = document.getElementById('filtroCategoriaArticulo')?.value;
+    const filtroCat = tomSelectFiltroCategoria ? tomSelectFiltroCategoria.getValue() : (document.getElementById('filtroCategoriaArticulo')?.value || '');
     const filtroArea = document.getElementById('filtroAreaArticulo')?.value;
 
     try {
@@ -500,6 +553,7 @@ async function cargarArticulos(pagina = 1) {
         if (buscar) url += `&buscar=${encodeURIComponent(buscar)}`;
         if (filtroCat) url += `&id_categoria=${encodeURIComponent(filtroCat)}`;
         if (filtroArea) url += `&id_area=${encodeURIComponent(filtroArea)}`;
+        if (forzarRefresco) url += `&_t=${Date.now()}`;
 
         const response = await authFetch(url);
         if (!response.ok) throw new Error('Error al consultar artículos');
@@ -531,7 +585,10 @@ async function cargarArticulos(pagina = 1) {
         });
     } catch (error) {
         console.error('Error cargando artículos:', error);
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Error al cargar artículos: ${escapeHtml(error.message)}</td></tr>`;
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="100%" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i> Error al cargar artículos: ${escapeHtml(error.message || 'Error de conexión')}</td></tr>`;
+        }
+        throw error;
     }
 }
 
@@ -635,7 +692,17 @@ function abrirModalCrearArticulo() {
     document.getElementById('txtArtId').value = '';
     document.getElementById('modalArticuloFormLabel').innerHTML = `<i class="bi bi-plus-circle me-1"></i> Nuevo Artículo`;
     document.getElementById('divArtEstado').classList.add('d-none');
+
+    // Ocultar alerta de categoría inactiva
+    const alertEl = document.getElementById('alertaCategoriaInactiva');
+    if (alertEl) alertEl.classList.add('d-none');
+
     poblarSelectsFormularioArticulo();
+
+    if (tomSelectArtCategoria) {
+        tomSelectArtCategoria.clear();
+    }
+
     if (modalArtForm) modalArtForm.show();
 }
 
@@ -651,11 +718,34 @@ async function abrirModalEditarArticulo(id) {
 
         document.getElementById('txtArtId').value = art.id_articulo;
         document.getElementById('txtArtDescripcion').value = art.descripcion;
-        document.getElementById('selectArtCategoria').value = art.id_categoria;
         document.getElementById('selectArtArea').value = art.id_area;
         document.getElementById('selectArtActivo').value = art.activo;
         document.getElementById('divArtEstado').classList.remove('d-none');
         document.getElementById('modalArticuloFormLabel').innerHTML = `<i class="bi bi-pencil-square me-1"></i> Editar Artículo #${art.id_articulo}`;
+
+        // Comprobar si la categoría asignada al artículo sigue activa
+        const catEstaActiva = categoriasActivasCache.some(c => Number(c.id_categoria) === Number(art.id_categoria));
+        const alertEl = document.getElementById('alertaCategoriaInactiva');
+        const txtAlertEl = document.getElementById('txtAlertaCatInactiva');
+
+        if (!catEstaActiva) {
+            // La categoría fue dada de baja previamente: alertar y forzar selección de categoría activa
+            if (alertEl && txtAlertEl) {
+                const nombreCat = art.categoria_descripcion || `ID #${art.id_categoria}`;
+                txtAlertEl.innerHTML = `<strong>Aviso importante:</strong> La categoría asignada originalmente (<em>${escapeHtml(nombreCat)}</em>) fue dada de baja. Debe seleccionar una categoría activa válida antes de guardar los cambios.`;
+                alertEl.classList.remove('d-none');
+            }
+            if (tomSelectArtCategoria) {
+                tomSelectArtCategoria.clear();
+            }
+        } else {
+            if (alertEl) alertEl.classList.add('d-none');
+            if (tomSelectArtCategoria) {
+                tomSelectArtCategoria.setValue(String(art.id_categoria));
+            } else {
+                document.getElementById('selectArtCategoria').value = art.id_categoria;
+            }
+        }
 
         if (modalArtForm) modalArtForm.show();
     } catch (e) {
@@ -670,12 +760,19 @@ async function guardarArticulo(e) {
     e.preventDefault();
     const id = document.getElementById('txtArtId').value;
     const descripcion = document.getElementById('txtArtDescripcion').value.trim();
-    const id_categoria = document.getElementById('selectArtCategoria').value;
+    const id_categoria = tomSelectArtCategoria ? tomSelectArtCategoria.getValue() : document.getElementById('selectArtCategoria').value;
     const id_area = document.getElementById('selectArtArea').value;
     const activo = document.getElementById('selectArtActivo').value;
 
     if (!descripcion || !id_categoria || !id_area) {
-        mostrarToast('Por favor, complete todos los campos obligatorios.', 'error');
+        mostrarToast('Por favor, complete todos los campos obligatorios y seleccione una categoría activa válida.', 'error');
+        return;
+    }
+
+    // Validar en el cliente que la categoría pertenezca a la lista de categorías activas
+    const catValida = categoriasActivasCache.some(c => String(c.id_categoria) === String(id_categoria));
+    if (!catValida) {
+        mostrarToast('No se puede guardar el artículo con una categoría inactiva. Por favor, seleccione una categoría activa.', 'error');
         return;
     }
 
@@ -776,17 +873,108 @@ async function ejecutarBorradoLogico() {
 }
 
 // ============================================================================
-// AUXILIARES Y POBLADO DE SELECTS
+// AUXILIARES Y POBLADO DE SELECTS CON TOM SELECT
 // ============================================================================
 
-function poblarSelectsCategorias() {
-    const filtro = document.getElementById('filtroCategoriaArticulo');
-    if (filtro) {
-        const valActual = filtro.value;
-        filtro.innerHTML = '<option value="">Todas las Categorías</option>' +
-            categoriasCache.map(c => `<option value="${c.id_categoria}">${escapeHtml(c.descripcion)}</option>`).join('');
-        filtro.value = valActual;
+/**
+ * Consulta la totalidad de categorías activas para poblar los selectores interactivos TomSelect.
+ */
+async function cargarCategoriasParaSelectores() {
+    try {
+        const res = await authFetch(`${API_BASE_URL}/categorias?limit=1000&activo=1`);
+        if (!res.ok) throw new Error('Error al consultar categorías para selectores');
+        const raw = await res.json();
+        const items = Array.isArray(raw) ? raw : (raw.data || []);
+        categoriasActivasCache = items.filter(c => c.activo === 1);
+        poblarTomSelectsCategorias();
+    } catch (err) {
+        console.error('Error cargando categorías para selectores:', err);
     }
+}
+
+/**
+ * Inicializa la instancia de TomSelect en el filtro de categorías si aún no existe.
+ */
+function inicializarTomSelectFiltroCategoria() {
+    const el = document.getElementById('filtroCategoriaArticulo');
+    if (!el || tomSelectFiltroCategoria) return;
+
+    tomSelectFiltroCategoria = new TomSelect('#filtroCategoriaArticulo', {
+        create: false,
+        allowEmptyOption: false,
+        placeholder: 'Todas las categorías',
+        plugins: ['clear_button'],
+        sortField: { field: 'text', direction: 'asc' },
+        maxOptions: 1000
+    });
+
+    tomSelectFiltroCategoria.on('change', () => {
+        filtrarArticulos();
+    });
+}
+
+/**
+ * Inicializa la instancia de TomSelect en el selector de categoría del modal de artículo si aún no existe.
+ */
+function inicializarTomSelectArtCategoria() {
+    const el = document.getElementById('selectArtCategoria');
+    if (!el || tomSelectArtCategoria) return;
+
+    tomSelectArtCategoria = new TomSelect('#selectArtCategoria', {
+        create: false,
+        allowEmptyOption: false,
+        placeholder: 'Buscar y seleccionar categoría...',
+        plugins: ['clear_button'],
+        sortField: { field: 'text', direction: 'asc' },
+        maxOptions: 1000
+    });
+}
+
+/**
+ * Actualiza dinámicamente las opciones de los selectores TomSelect de categorías
+ * sin duplicar componentes en el DOM y preservando los valores seleccionados.
+ */
+function poblarTomSelectsCategorias() {
+    inicializarTomSelectFiltroCategoria();
+    inicializarTomSelectArtCategoria();
+
+    // 1. Selector de filtro en la barra de herramientas de Artículos
+    if (tomSelectFiltroCategoria) {
+        const valActual = tomSelectFiltroCategoria.getValue();
+        tomSelectFiltroCategoria.clearOptions();
+        categoriasActivasCache.forEach(c => {
+            tomSelectFiltroCategoria.addOption({
+                value: String(c.id_categoria),
+                text: c.descripcion
+            });
+        });
+        if (valActual) {
+            tomSelectFiltroCategoria.setValue(valActual, true);
+        } else {
+            tomSelectFiltroCategoria.clear(true);
+        }
+    }
+
+    // 2. Selector dentro del modal de alta / edición de Artículos
+    if (tomSelectArtCategoria) {
+        const valActual = tomSelectArtCategoria.getValue();
+        tomSelectArtCategoria.clearOptions();
+        categoriasActivasCache.forEach(c => {
+            tomSelectArtCategoria.addOption({
+                value: String(c.id_categoria),
+                text: c.descripcion
+            });
+        });
+        if (valActual) {
+            tomSelectArtCategoria.setValue(valActual, true);
+        } else {
+            tomSelectArtCategoria.clear(true);
+        }
+    }
+}
+
+function poblarSelectsCategorias() {
+    poblarTomSelectsCategorias();
 }
 
 function poblarSelectsAreas() {
@@ -800,17 +988,14 @@ function poblarSelectsAreas() {
 }
 
 function poblarSelectsFormularioArticulo() {
-    const selectCat = document.getElementById('selectArtCategoria');
+    poblarTomSelectsCategorias();
+
     const selectArea = document.getElementById('selectArtArea');
-
-    if (selectCat) {
-        selectCat.innerHTML = '<option value="">-- Seleccionar Categoría --</option>' +
-            categoriasCache.map(c => `<option value="${c.id_categoria}">${escapeHtml(c.descripcion)} ${c.activo === 0 ? '(Inactiva)' : ''}</option>`).join('');
-    }
-
     if (selectArea) {
+        const valActual = selectArea.value;
         selectArea.innerHTML = '<option value="">-- Seleccionar Área --</option>' +
             areasCache.map(a => `<option value="${a.id_area}">${escapeHtml(a.descripcion)}</option>`).join('');
+        if (valActual) selectArea.value = valActual;
     }
 }
 

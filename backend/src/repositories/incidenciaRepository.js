@@ -264,35 +264,6 @@ class IncidenciaRepository {
     };
   }
 
-  async getReportesEstadisticos() {
-    const totalQuery = `SELECT COUNT(*)::int AS total_incidencias FROM public.incidencias`;
-    const totalResult = await db.query(totalQuery);
-
-    const areaQuery = `
-      SELECT ar.descripcion AS area, COUNT(inc.id_incidencia)::int AS total
-      FROM public.areas ar
-      JOIN public.articulos art ON ar.id_area = art.id_area
-      JOIN public.incidencias inc ON art.id_articulo = inc.id_articulo
-      GROUP BY ar.descripcion
-    `;
-    const areaResult = await db.query(areaQuery);
-
-    const catQuery = `
-      SELECT cat.descripcion AS categoria, COUNT(inc.id_incidencia)::int AS total
-      FROM public.categorias cat
-      JOIN public.articulos art ON cat.id_categoria = art.id_categoria
-      JOIN public.incidencias inc ON art.id_articulo = inc.id_articulo
-      GROUP BY cat.descripcion
-    `;
-    const catResult = await db.query(catQuery);
-
-    return {
-      total_incidencias: totalResult.rows[0]?.total_incidencias || 0,
-      por_area: areaResult.rows,
-      por_categoria: catResult.rows
-    };
-  }
-
   /**
    * Consulta las incidencias filtradas por rango de fechas, estado y técnico asignado
    * para la generación de reportes oficiales en PDF.

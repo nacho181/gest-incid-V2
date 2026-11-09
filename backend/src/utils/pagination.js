@@ -15,17 +15,25 @@
  * @param {number} maxLimit - Límite máximo permitido para evitar sobrecarga (ej. 100)
  * @returns {{ page: number, limit: number, offset: number }}
  */
-export function parsePagination(query = {}, defaultLimit = 10, maxLimit = 100) {
+export function parsePagination(query = {}, defaultLimit = 10, maxLimit = 1000) {
   let page = parseInt(query.page, 10);
   if (isNaN(page) || page < 1) {
     page = 1;
   }
 
-  let limit = parseInt(query.limit, 10);
-  if (isNaN(limit) || limit < 1) {
-    limit = defaultLimit;
-  } else if (limit > maxLimit) {
+  const isAll = query.all === 'true' || query.all === '1';
+
+  let limit;
+  if (isAll) {
     limit = maxLimit;
+    page = 1;
+  } else {
+    limit = parseInt(query.limit, 10);
+    if (isNaN(limit) || limit < 1) {
+      limit = defaultLimit;
+    } else if (limit > maxLimit) {
+      limit = maxLimit;
+    }
   }
 
   const offset = (page - 1) * limit;

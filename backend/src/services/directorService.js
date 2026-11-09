@@ -105,10 +105,6 @@ class DirectorService {
     return cancelada;
   }
 
-  async getReportesEstadisticos() {
-    return await incidenciaRepository.getReportesEstadisticos();
-  }
-
   async generarReportePdf({ desde, hasta, id_estado, asignado_a }, outputStream) {
     const incidencias = await incidenciaRepository.getReporteIncidencias({
       desde,

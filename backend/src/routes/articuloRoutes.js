@@ -17,7 +17,7 @@ const router = express.Router();
 
 // Middleware estricto para validar token JWT y verificar roles del Área de Sistemas
 const verificarAdmin = [verificarToken, autorizarRol(ROLES.SISTEMAS)];
-const verificarLectura = [verificarToken, autorizarRol(ROLES.SISTEMAS, ROLES.MUNICIPAL)];
+const verificarLectura = [verificarToken, autorizarRol(ROLES.DIRECTOR, ROLES.SISTEMAS, ROLES.MUNICIPAL)];
 
 /**
  * @openapi

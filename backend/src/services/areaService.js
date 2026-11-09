@@ -12,7 +12,7 @@ class AreaService {
   async getAreas(query = {}) {
     const { buscar, search, q } = query;
     const textoBusqueda = buscar || search || q || null;
-    const { page, limit, offset } = parsePagination(query, 50); // Catálogo con límite holgado por omisión
+    const { page, limit, offset } = parsePagination(query, 50, 1000); // Catálogo con límite holgado por omisión
     const { sortSql } = parseSort(query, AREAS_SORT_MAP, 'id_area', 'ASC');
 
     const { rows, total } = await areaRepository.findAllPaginated({

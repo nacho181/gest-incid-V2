@@ -75,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarDashboard();
     cargarEmpleadosSistemas();
     cargarGestionIncidencias();
-    cargarReportesEstadisticos();
 
     // Registrar escuchadores de eventos
     setupEventListenersDirector();
@@ -135,11 +134,28 @@ function setupEventListenersDirector() {
     // Botón de refrescar gestión de incidencias
     const btnRefresh = document.getElementById('btnRefreshGestion');
     if (btnRefresh) {
-        btnRefresh.addEventListener('click', (e) => {
-            e.currentTarget?.blur();
-            cargarGestionIncidencias(paginaActualGestion);
-            cargarDashboard();
-            mostrarToastDirector('Listado de gestión actualizado', 'info');
+        btnRefresh.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            btn?.blur();
+            const icon = btn?.querySelector('i');
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('spin');
+            btn?.classList.add('opacity-75');
+
+            try {
+                await Promise.all([
+                    cargarGestionIncidencias(paginaActualGestion, true),
+                    cargarDashboard(true)
+                ]);
+                mostrarToastDirector('Listado de gestión actualizado correctamente.', 'info');
+            } catch (err) {
+                console.error('Error al refrescar gestión:', err);
+                mostrarToastDirector('Error al actualizar el listado de gestión.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('spin');
+                btn?.classList.remove('opacity-75');
+            }
         });
     }
 
@@ -236,9 +252,10 @@ function mostrarToastDirector(mensaje, tipo = 'exito') {
  * Consume el endpoint del dashboard para renderizar los resúmenes y métricas.
  * GET /dashboard
  */
-async function cargarDashboard() {
+async function cargarDashboard(forzarRefresco = false) {
     try {
-        const response = await fetch(`${API_BASE_URL}/dashboard`, {
+        const cacheBuster = forzarRefresco ? `?_t=${Date.now()}` : '';
+        const response = await fetch(`${API_BASE_URL}/dashboard${cacheBuster}`, {
             headers: getAuthHeaders()
         });
 
@@ -368,15 +385,16 @@ async function cargarEmpleadosSistemas() {
  * Carga todas las incidencias para la tabla interactiva de gestión y asignación con paginación LIMIT/OFFSET.
  * GET /incidencias (el Director recibe todas con soporte de page y limit).
  */
-async function cargarGestionIncidencias(pagina = 1) {
+async function cargarGestionIncidencias(pagina = 1, forzarRefresco = false) {
     paginaActualGestion = pagina;
     const tbody = document.getElementById('tbodyGestion');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-concordia me-2"></div>Cargando incidencias...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="100%" class="text-center text-muted py-4"><span class="spinner-border spinner-border-sm me-2"></span>Actualizando datos...</td></tr>';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteGestion}&order_by=creado&order_dir=DESC`, {
+        const cacheBuster = forzarRefresco ? `&_t=${Date.now()}` : '';
+        const response = await fetch(`${API_BASE_URL}/incidencias?page=${pagina}&limit=${limiteGestion}&order_by=creado&order_dir=DESC${cacheBuster}`, {
             headers: getAuthHeaders()
         });
 
@@ -396,7 +414,7 @@ async function cargarGestionIncidencias(pagina = 1) {
         tbody.innerHTML = '';
 
         if (!incidencias || incidencias.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No se encontraron incidencias registradas.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="100%" class="text-center text-muted py-4">No se encontraron incidencias registradas.</td></tr>';
             actualizarPaginadorGestion();
             return;
         }
@@ -454,7 +472,8 @@ async function cargarGestionIncidencias(pagina = 1) {
 
     } catch (error) {
         console.error('Error en gestión de incidencias:', error);
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">Error de conexión al cargar el listado.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="100%" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-1"></i> Error al cargar datos: ${escapeHtml(error.message || 'Error de conexión al cargar el listado')}</td></tr>`;
+        throw error;
     }
 }
 
@@ -665,70 +684,6 @@ async function ejecutarCancelacionDirector() {
         mostrarToastDirector(error.message, 'error');
     } finally {
         idIncidenciaCancelarDirector = null;
-    }
-}
-
-/**
- * Carga las estadísticas para el reporte en la pestaña de reportes.
- * GET /reportes
- */
-async function cargarReportesEstadisticos() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/reportes`, {
-            headers: getAuthHeaders()
-        });
-
-        if (!response.ok) throw new Error('Error al cargar datos estadísticos');
-
-        const data = await response.json();
-
-        const elRepTotal = document.getElementById('repTotalIncidencias');
-        if (elRepTotal) elRepTotal.textContent = data.total_incidencias || 0;
-
-        // Distribución por Área
-        const contAreas = document.getElementById('repContenidoAreas');
-        if (contAreas) {
-            contAreas.innerHTML = '';
-            if (!data.por_area || data.por_area.length === 0) {
-                contAreas.innerHTML = '<div class="col-12 text-muted small">Sin datos de áreas</div>';
-            } else {
-                data.por_area.forEach(a => {
-                    const col = document.createElement('div');
-                    col.className = 'col-6 col-md-4';
-                    col.innerHTML = `
-                        <div class="p-2 border rounded bg-light">
-                            <span class="d-block text-muted small">${escapeHtml(a.area)}</span>
-                            <strong class="text-concordia-dark">${a.total} ticket(s)</strong>
-                        </div>
-                    `;
-                    contAreas.appendChild(col);
-                });
-            }
-        }
-
-        // Distribución por Categoría
-        const contCats = document.getElementById('repContenidoCategorias');
-        if (contCats) {
-            contCats.innerHTML = '';
-            if (!data.por_categoria || data.por_categoria.length === 0) {
-                contCats.innerHTML = '<div class="col-12 text-muted small">Sin datos de categorías</div>';
-            } else {
-                data.por_categoria.forEach(c => {
-                    const col = document.createElement('div');
-                    col.className = 'col-6 col-md-4';
-                    col.innerHTML = `
-                        <div class="p-2 border rounded bg-light">
-                            <span class="d-block text-muted small">${escapeHtml(c.categoria)}</span>
-                            <strong class="text-concordia-dark">${c.total} ticket(s)</strong>
-                        </div>
-                    `;
-                    contCats.appendChild(col);
-                });
-            }
-        }
-
-    } catch (error) {
-        console.error('Error en reportes estadísticos:', error);
     }
 }
 

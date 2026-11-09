@@ -71,18 +71,19 @@ El control de acceso basado en roles (**RBAC**) distingue tres perfiles operativ
 
 ### 2.1. Empleado Municipal (`rol = 3`) — `index.html`
 - **Exploración de Equipamiento**: Consulta interactiva del catálogo de artículos activos con búsqueda instantánea por descripción, categoría o área municipal.
-- **Reporte de Incidencias**: Alta de tickets seleccionando el artículo afectado mediante buscador predictivo, nivel de prioridad (*Alta*, *Media*, *Baja*) y descripción del inconveniente. Toda nueva solicitud se registra en estado **Pendiente** (`id_estado = 1`) y asignada al usuario comodín *Sin Asignar* (`asignado_a = 0`).
-- **Seguimiento y Cancelación**: Historial paginado de incidencias propias con indicadores visuales de estado y posibilidad de cancelar solicitudes que aún permanezcan en estado *Pendiente*.
+- **Reporte de Incidencias**: Alta de tickets seleccionando el artículo afectado mediante buscador predictivo, nivel de prioridad (*Alta*, *Media*, *Baja*) y descripción del inconveniente. Toda nueva solicitud se registra en estado **Pendiente** (`id_estado = 1`) y sin técnico asignado (`asignado_a = NULL` / `0`).
+- **Seguimiento y Cancelación**: Historial paginado de incidencias propias con indicadores visuales de estado y posibilidad de cancelar solicitudes propias mientras permanezcan en estado **Pendiente**.
 
 ### 2.2. Empleado de Sistemas (`rol = 2`) — `sistemas.html` y `entidades.html`
 - **Mesa de Ayuda Técnica (`sistemas.html`)**: Bandeja de trabajo ordenada automáticamente por criticidad operativa (estado *Pendiente* -> *En Proceso* -> *Resuelta*, prioridad y antigüedad), con contadores en tiempo real y filtros rápidos por estado.
-- **Resolución y Notificación**: Cierre técnico de incidencias asignadas registrando la solución aplicada (`descripcion_resolucion`), actualizando la trazabilidad en `incidencias_estados` y enviando automáticamente un correo electrónico institucional al empleado solicitante.
+- **Inicio de Atención ("En Proceso")**: El técnico revisa las incidencias asignadas en estado *Pendiente* y las transiciona manualmente al estado **"En Proceso"** (`id_estado = 2`) cuando comienza efectivamente a repararlas o atenderlas. Una vez en este estado, la solicitud queda bloqueada contra cancelaciones.
+- **Resolución y Notificación**: Concluida la reparación técnica de una incidencia *En Proceso*, la transiciona al estado **"Resuelta"** (`id_estado = 3`) ingresando obligatoriamente la solución técnica aplicada (`descripcion_resolucion`). Esta acción actualiza la trazabilidad en `incidencias_estados` y dispara de forma automática un correo electrónico institucional al empleado solicitante.
 - **Gestión del Catálogo (`entidades.html`)**: Operaciones **BREAD** (*Browse, Read, Edit, Add, Delete*) sobre **Categorías** y **Artículos** con paginación y filtrado en base de datos. La eliminación implementa **baja lógica** (`activo = 0`) preservando la integridad referencial histórica de las incidencias registradas, con opción de reactivación (`activo = 1`).
 
 ### 2.3. Director de Sistemas (`rol = 1`) — `director.html`
-- **Dashboard de Supervisión**: Resumen ejecutivo con distribución de incidencias por estado, volumen diario por fecha y listado destacado de incidentes urgentes (*Prioridad Alta* pendientes o en curso).
-- **Gestión y Asignación de Técnicos**: Vista general paginada de todas las incidencias del municipio, asignación o reasignación de técnicos activos del Área de Sistemas (transicionando automáticamente el ticket a *En Proceso*) y cancelación supervisada de solicitudes pendientes.
-- **Exportación de Reportes en PDF**: Generación y descarga directa de informes oficiales en formato PDF combinando filtros por rango de fechas (`desde`, `hasta`), estado y técnico responsable.
+- **Dashboard de Supervisión**: Resumen ejecutivo con métricas de incidencias por estado, evolución diaria por fecha y listado destacado de incidentes urgentes (*Prioridad Alta* pendientes o en curso).
+- **Gestión y Asignación de Técnicos**: Vista general paginada de todas las incidencias de la Municipalidad. Permite asignar o reasignar técnicos activos del Área de Sistemas manteniendo el estado **"Pendiente"** (ya que el técnico aún no comenzó a trabajar en ella). Permite además la cancelación supervisada de cualquier solicitud que se encuentre en estado **Pendiente**.
+- **Generación y Descarga de Reportes en PDF**: Panel de exportación oficial con filtros paramétricos por rango de fechas (`desde`, `hasta`), estado de incidencia y técnico responsable, generando documentos PDF vectoriales mediante streaming directo con PDFKit.
 
 ### Credenciales de Prueba (Incluidas en `incidencias_db.sql`)
 
@@ -95,7 +96,60 @@ El control de acceso basado en roles (**RBAC**) distingue tres perfiles operativ
 
 ---
 
-## 3. Instalación y Puesta en Marcha
+## 3. Ciclo de Vida y Máquina de Estados de una Incidencia
+
+El sistema implementa una máquina de estados estricta y trazable con auditoría histórica en base de datos (`incidencias_estados`):
+
+```text
+  [Empleado Municipal]
+     Reporta Incidencia
+             │
+             ▼
+   ┌──────────────────┐           Cancela Solicitante
+   │  1. PENDIENTE    │────────────────────────────────────────┐
+   │ (Sin Asignar o   │           Cancela Director             │
+   │ Técnico Asignado)│                                        │
+   └──────────────────┘                                        │
+             │                                                 │
+             │  Técnico inicia atención                        │
+             │  (PUT /:id/en-proceso o PATCH {id_estado: 2})   ▼
+             ▼                                        ┌──────────────────┐
+   ┌──────────────────┐                               │   4. CANCELADA   │
+   │  2. EN PROCESO   │                               │  (Baja lógica de │
+   │ (Bloqueada contra│                               │    la solicitud) │
+   │   cancelaciones) │                               └──────────────────┘
+   └──────────────────┘
+             │
+             │  Técnico finaliza con solución técnica obligatoria
+             │  (PUT /:id/finalizar o PATCH {id_estado: 3, descripcion_resolucion})
+             ▼
+   ┌──────────────────┐
+   │   3. RESUELTA    │ ───► Disparo automático de correo institucional (Nodemailer)
+   │  (Finalizada con │      al Empleado Municipal solicitante
+   │  solución técnica│
+   │   documentada)   │
+   └──────────────────┘
+```
+
+### Reglas de Negocio del Flujo de Estados
+
+1. **Pendiente (`id_estado = 1`)**:
+   - Toda nueva incidencia reportada por un Empleado Municipal nace en estado **Pendiente** y sin técnico asignado (`asignado_a = NULL` / `0`).
+   - Cuando el **Director de Sistemas** le asigna la incidencia a un técnico del Área de Sistemas, la incidencia **permanece en estado "Pendiente"** (dado que el técnico asignado aún no comenzó formalmente a trabajar en ella).
+   - Mientras la incidencia se encuentre en estado **"Pendiente"**, tanto el **empleado solicitante** (únicamente sobre sus incidencias propias) como el **Director de Sistemas** (sobre cualquier incidencia) tienen potestad para cancelarla.
+2. **En Proceso (`id_estado = 2`)**:
+   - El **Empleado de Sistemas (Técnico)** visualiza en su panel las incidencias asignadas en estado *Pendiente* y las pasa manualmente al estado **"En Proceso"** mediante la acción correspondiente (`PUT /api/v1/incidencias/:id/en-proceso` o `PATCH /api/v1/incidencias/:id` con `{ id_estado: 2 }`) en el momento en que inicia efectivamente su labor de reparación o atención.
+   - Una vez en estado **"En Proceso"**, la incidencia **ya no puede ser cancelada** bajo ninguna circunstancia, resguardando la trazabilidad del trabajo técnico en desarrollo.
+3. **Resuelta / Finalizada (`id_estado = 3`)**:
+   - Cuando el técnico concluye la reparación de una incidencia que estaba en estado **"En Proceso"**, la transiciona a estado **"Resuelta"** (`PUT /api/v1/incidencias/:id/finalizar` o `PATCH /api/v1/incidencias/:id` con `{ id_estado: 3, descripcion_resolucion }`), siendo obligatorio ingresar la descripción de la solución técnica aplicada (`descripcion_resolucion`).
+   - Esta acción dispara automáticamente la **notificación por correo electrónico** al empleado solicitante a través de Nodemailer, informando la resolución técnica y fecha de cierre.
+   - Una incidencia resuelta no puede ser reabierta, re-finalizada ni cancelada.
+4. **Cancelada (`id_estado = 4`)**:
+   - Baja lógica de la solicitud (aplicable **únicamente** cuando la incidencia se encontraba en estado **"Pendiente"**). Registra el cambio en el historial de estados y genera una notificación por correo electrónico de aviso de cancelación.
+
+---
+
+## 4. Instalación y Puesta en Marcha
 
 ### Requisitos Previos
 - **Node.js** v18.0.0 o superior.
@@ -192,7 +246,7 @@ npm test
 
 ---
 
-## 4. Contrato de API REST y Documentación Interactiva
+## 5. Contrato de API REST y Documentación Interactiva
 
 ### Documentación Swagger (OpenAPI 3.0)
 Con el servidor backend en ejecución, la documentación interactiva para probar todos los endpoints se encuentra disponible en:
@@ -224,8 +278,10 @@ Todos los listados de colecciones aplican paginación a nivel SQL (`LIMIT` y `OF
 | **Autenticación** | `GET` | `/api/v1/auth/me` | Autenticado (`1, 2, 3`) | Devuelve los datos del usuario asociado al token |
 | **Autenticación** | `POST` | `/api/v1/auth/avatar` | Autenticado (`1, 2, 3`) | Actualiza la imagen de perfil (`multipart/form-data`, máx. 2 MB) |
 | **Incidencias** | `GET` | `/api/v1/incidencias` | `1, 2, 3` | Lista incidencias paginadas según el rol (`page`, `limit`, `order_by`, `order_dir`, `id_estado`, `prioridad`, `buscar`) |
-| **Incidencias** | `POST` | `/api/v1/incidencias` | Municipal (`3`) | Registra una nueva incidencia en estado *Pendiente* con trazabilidad inicial |
-| **Incidencias** | `PATCH` | `/api/v1/incidencias/:id` | `1, 2, 3` (según acción) | Asigna técnico (`{ asignado_a }`), finaliza (`{ id_estado: 3, descripcion_resolucion }`) o cancela (`{ id_estado: 4 }`) |
+| **Incidencias** | `POST` | `/api/v1/incidencias` | Municipal (`3`) | Registra una nueva incidencia en estado *Pendiente* sin técnico asignado (`asignado_a = NULL`) |
+| **Incidencias** | `PUT` | `/api/v1/incidencias/:id/en-proceso` | Sistemas (`2`), Director (`1`) | Pasa la incidencia de *Pendiente* (`1`) a *En Proceso* (`2`) al iniciar atención técnica |
+| **Incidencias** | `PUT` | `/api/v1/incidencias/:id/finalizar` | Sistemas (`2`), Director (`1`) | Finaliza la incidencia en estado *Resuelta* (`3`), registra la solución técnica y envía email |
+| **Incidencias** | `PATCH` | `/api/v1/incidencias/:id` | `1, 2, 3` (según acción) | Endpoint unificado: asigna técnico (`{ asignado_a }`), inicia atención (`{ id_estado: 2 }`), finaliza (`{ id_estado: 3, descripcion_resolucion }`) o cancela (`{ id_estado: 4 }`, solo en estado *Pendiente*) |
 | **Artículos** | `GET` | `/api/v1/articulos` | `2, 3` | **[Browse]** Lista artículos paginados con categoría y área (`incluir_inactivos`, `id_categoria`, `id_area`, `buscar`) |
 | **Artículos** | `GET` | `/api/v1/articulos/:id` | `2, 3` | **[Read]** Obtiene el detalle de un artículo por su identificador |
 | **Artículos** | `POST` | `/api/v1/articulos` | Sistemas (`2`) | **[Add]** Registra un nuevo artículo activo (`activo = 1`) |
@@ -237,14 +293,13 @@ Todos los listados de colecciones aplican paginación a nivel SQL (`LIMIT` y `OF
 | **Categorías** | `PUT` / `PATCH` | `/api/v1/categorias/:id` | Sistemas (`2`) | **[Edit]** Modifica la descripción o reactiva una categoría (`activo = 1`) |
 | **Categorías** | `DELETE` | `/api/v1/categorias/:id` | Sistemas (`2`) | **[Delete]** Ejecuta la baja lógica de la categoría (`activo = 0`) |
 | **Áreas** | `GET` | `/api/v1/areas` | Público / Autenticado | Lista las áreas municipales activas con paginación y búsqueda |
-| **Usuarios** | `GET` | `/api/v1/usuarios?rol=2` | Director (`1`) | Lista el personal técnico activo del Área de Sistemas |
+| **Usuarios** | `GET` | `/api/v1/usuarios?rol=2` | Director (`1`) | Lista el personal técnico activo del Área de Sistemas para asignación |
 | **Director** | `GET` | `/api/v1/dashboard` | Director (`1`) | Resumen de métricas por estado, evolución por fecha e incidencias urgentes |
-| **Director** | `GET` | `/api/v1/reportes` | Director (`1`) | Estadísticas agregadas de incidencias por área y categoría |
-| **Director** | `GET` | `/api/v1/reportes/pdf` | Director (`1`) | Genera y transmite por stream el reporte oficial en PDF (`desde`, `hasta`, `id_estado`, `asignado_a`) |
+| **Director** | `GET` | `/api/v1/director/reportes/pdf` | Director (`1`) | Genera y transmite por stream el reporte oficial en PDF con filtros (`desde`, `hasta`, `id_estado`, `asignado_a`). Alias: `/api/v1/reportes/pdf` |
 
 ---
 
-## 5. Créditos Institucionales
+## 6. Créditos Institucionales
 
 - **Proyecto**: Sistema Integral de Registro de Incidencias — Intranet Municipal
 - **Institución**: Municipalidad de Concordia (Entre Ríos, Argentina) — Dirección de Sistemas

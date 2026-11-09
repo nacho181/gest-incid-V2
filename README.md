@@ -169,12 +169,7 @@ psql -U postgres -d incidencias_db -f backend/database/incidencias_db.sql
 
 ### Paso 2: Configurar Variables de Entorno del Backend
 
-Copiar el archivo de ejemplo `backend/.env.example` hacia `backend/.env` y ajustar las credenciales de conexión a PostgreSQL:
-
-```bash
-cd backend
-cp .env.example .env
-```
+Editá directamente el archivo `backend/.env.example` y configurá las variables de conexión con tus credenciales locales de PostgreSQL (`DB_USER`, `DB_PASSWORD`, `DB_NAME`, etc.).
 
 Contenido de referencia de `backend/.env`:
 
@@ -298,9 +293,3 @@ Todos los listados de colecciones aplican paginación a nivel SQL (`LIMIT` y `OF
 | **Director** | `GET` | `/api/v1/director/reportes/pdf` | Director (`1`) | Genera y transmite por stream el reporte oficial en PDF con filtros (`desde`, `hasta`, `id_estado`, `asignado_a`). Alias: `/api/v1/reportes/pdf` |
 
 ---
-
-## 6. Créditos Institucionales
-
-- **Proyecto**: Sistema Integral de Registro de Incidencias — Intranet Municipal
-- **Institución**: Municipalidad de Concordia (Entre Ríos, Argentina) — Dirección de Sistemas
-- **Contexto Académico**: Trabajo Final Integrador Universitario

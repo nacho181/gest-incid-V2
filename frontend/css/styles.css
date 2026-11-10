@@ -1,3 +1,4 @@
+/* Fuentes y librerías externas */
 @import "@fontsource/inter/300.css";
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/500.css";
@@ -244,7 +245,10 @@ div.card.article-card:hover {
     color: #ffffff !important;
 }
 
-/* Adjust Tom Select styling to match Concordia Bootstrap 5 theme */
+/* --------------------------------------------------------------------------
+   10. COMPONENTES: SELECTORES TOM SELECT
+   -------------------------------------------------------------------------- */
+/* Ajuste de estilos de Tom Select para el tema Concordia y Bootstrap 5 */
 .ts-wrapper.single .ts-control {
     background-color: #fff;
     border: 1px solid #dee2e6;
@@ -265,12 +269,14 @@ div.card.article-card:hover {
     border-radius: 0.25rem;
 }
 
+/* Control enfocado */
 .ts-wrapper.focus .ts-control {
     border-color: var(--concordia-primary) !important;
     box-shadow: 0 0 0 0.25rem rgba(30, 107, 55, 0.25) !important;
     outline: 0;
 }
 
+/* Menú desplegable y opciones */
 .ts-dropdown {
     border-color: #dee2e6;
     border-radius: 0.375rem;
@@ -296,13 +302,13 @@ div.card.article-card:hover {
     font-weight: 600;
 }
 
-/* Placeholder styling: texto gris nativo que desaparece al escribir */
+/* Marcador de posición (placeholder): texto gris nativo que desaparece al escribir */
 .ts-wrapper .ts-control input::placeholder {
     color: #6c757d !important;
     opacity: 0.85;
 }
 
-/* Clear button (plugin 'clear_button'): botón cruz accesible y estilizado */
+/* Botón de limpiar selección (plugin 'clear_button'): cruz accesible y estilizada */
 .plugin-clear_button .clear-button {
     font-size: 1.15rem;
     line-height: 1;
@@ -316,7 +322,7 @@ div.card.article-card:hover {
 }
 
 /* --------------------------------------------------------------------------
-   10. HERRAMIENTAS Y BOTONERAS DE ACCIONES (CATÁLOGO Y ENTIDADES)
+   11. HERRAMIENTAS Y BOTONERAS DE ACCIONES (CATÁLOGO Y ENTIDADES)
    -------------------------------------------------------------------------- */
 /* Alineación vertical estandarizada para interruptores en barras de herramientas */
 .toolbar-switch {
@@ -356,7 +362,7 @@ div.card.article-card:hover {
 }
 
 /* --------------------------------------------------------------------------
-   11. ANIMACIÓN PARA BOTONES DE ACTUALIZAR / REFRESCAR
+   12. ANIMACIÓN PARA BOTONES DE ACTUALIZAR / REFRESCAR
    -------------------------------------------------------------------------- */
 .spin {
     animation: icon-spin 0.8s linear infinite;
